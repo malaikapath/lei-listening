@@ -159,11 +159,11 @@ function apiResendCode(email){
 function emailCode_(r){
   const first = String(r.name||'').split(' ')[0] || 'colleague';
   const body = `<p style="margin:0 0 14px">Dear ${first},</p>
-    <p style="margin:0 0 14px">Thank you for stepping into <i>Listening to Our Team</i>. Here is your personal code. With your email address, it takes you straight back to where you stopped, on any phone or computer.</p>
+    <p style="margin:0 0 14px">Here is your personal code. Use it with your email to pick up where you left off.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 18px"><tr><td style="background:#F7ECD3;border-radius:10px;padding:16px 26px;font-family:'Courier New',monospace;font-size:32px;letter-spacing:8px;color:#5A3D05;font-weight:bold">${r.code}</td></tr></table>
-    <p style="margin:0 0 18px">Speak your answers the way you would tell a colleague. There are no wrong answers, only honest ones, and the more detail you give, the more it helps.</p>
+    <p style="margin:0 0 18px">Speak freely. There are no wrong answers.</p>
     <p style="margin:0 0 6px"><a href="${PAGE_URL}" style="display:inline-block;background:#B4441B;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;padding:13px 22px;border-radius:10px">Continue the conversation</a></p>`;
-  sendMail_(r.email, 'Your personal code · Listening to Our Team', emailShell_({kicker:'Listening to Our Team', title:'Your voice, in your own words', standfirst:'Six questions. About fifteen minutes. One honest conversation about the work you do every day.', body}));
+  sendMail_(r.email, 'Your personal code · Listening to Our Team', emailShell_({kicker:'Listening to Our Team', title:'Your voice, in your own words', standfirst:'Six questions. Fifteen minutes. Speak or type.', body}));
 }
 function apiPublic(){
   const rs = rows_('responses'), units = {};
@@ -276,13 +276,13 @@ function emailReward_(r){
   if(r.rewardStatus === 'Voucher sent') line = `<p style="margin:0 0 10px">Your thank-you: <b>${reward}</b>.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 12px"><tr><td style="background:#F7ECD3;border:2px dashed #C98A12;border-radius:12px;padding:16px 24px;font-family:'Courier New',monospace;font-size:26px;letter-spacing:5px;color:#5A3D05;font-weight:bold">${r.voucher}</td></tr></table>
       <p style="margin:0 0 14px;font-size:14px;color:#6B5F57">${rg.howTo || ''}</p>`;
-  else if(r.rewardStatus === 'Awaiting approval') line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Because you used a personal email address, the Malaika Path team will confirm you are part of the Directorate, then send your voucher to this inbox.</p>`;
-  else line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Your voucher is being prepared and will reach this inbox shortly.</p>`;
+  else if(r.rewardStatus === 'Awaiting approval') line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. We will confirm your work details, then send your voucher here.</p>`;
+  else line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Your voucher will reach this inbox shortly.</p>`;
   const body = `<p style="margin:0 0 14px">Dear ${first},</p>
-    <p style="margin:0 0 14px">Your answers are in. Thank you for giving your time and your honesty. What you shared now joins the voices of colleagues across the Directorate, and together they will shape what comes next.</p>
+    <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
-    <p style="margin:0 0 6px">Please tell a colleague. Everyone who takes part finds a thank-you at the end.</p>`;
-  sendMail_(r.email, 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Every answer you gave is a step towards a better place to work, and better service for the workers and employers who come to us.', body}));
+    <p style="margin:0 0 6px">Tell a colleague: there is a thank-you for everyone who takes part.</p>`;
+  sendMail_(r.email, 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Your voice now shapes what comes next.', body}));
 }
 /* ------------------------------------------------------------------ emails: Malaika Path magazine layout */
 const PAGE_URL = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
@@ -309,22 +309,20 @@ function emailShell_(o){
   <tr><td style="padding:10px 32px 6px">
     <table role="presentation" width="100%" style="border-top:2px solid ${ink}"><tr><td style="padding-top:18px">
       <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">The programme</p>
-      <h2 style="margin:8px 0 10px;font-size:22px;font-weight:normal">Listening first, then building together</h2>
-      <p style="margin:0 0 12px;font-size:15px;line-height:1.7">${LEISH_FULL} is working in partnership with Malaika Path on a programme set in motion by the Honourable Minister. Its aim is simple: a directorate where every officer has the tools, support and recognition to serve Uganda’s workers and employers well, and where good work is seen.</p>
-      <p style="margin:0 0 12px;font-size:15px;line-height:1.7">Nothing will be designed from outside. The first step is <i>Listening to Our Team</i>: hearing, in staff’s own words, how the work really happens and what gets in the way. What you share becomes the foundation for everything that follows.</p>
+      <h2 style="margin:8px 0 8px;font-size:21px;font-weight:normal">Listening first, then building together</h2>
+      <p style="margin:0 0 8px;font-size:15px;line-height:1.6">The Minister’s vision, delivered with Malaika Path: better tools, support and recognition for every officer. It starts with your voice.</p>
     </td></tr></table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 6px;font-family:Arial,sans-serif"><tr>
-      ${[['1','Listen','Every voice, in its own words'],['2','Map','Gaps in tools, process, skills and culture'],['3','Design','Roles, measures and one connected workspace'],['4','Build','Better days at work, better service']].map(x => `<td width="25%" style="vertical-align:top;padding:10px 6px 10px 0"><div style="font-size:22px;color:${brand};font-family:Georgia,serif">${x[0]}</div><div style="font-size:13px;font-weight:bold;margin-top:2px">${x[1]}</div><div style="font-size:12px;color:${muted};line-height:1.45;margin-top:2px">${x[2]}</div></td>`).join('')}
+      ${[['1','Listen','Your words'],['2','Map','What gets in the way'],['3','Design','Better ways of working'],['4','Build','Better days, better service']].map(x => `<td width="25%" style="vertical-align:top;padding:10px 6px 10px 0"><div style="font-size:22px;color:${brand};font-family:Georgia,serif">${x[0]}</div><div style="font-size:13px;font-weight:bold;margin-top:2px">${x[1]}</div><div style="font-size:12px;color:${muted};line-height:1.45;margin-top:2px">${x[2]}</div></td>`).join('')}
     </tr></table>
   </td></tr>
   <tr><td style="padding:14px 32px 26px">
     <table role="presentation" width="100%" style="background:${cream};border-left:4px solid ${brand};border-radius:6px"><tr><td style="padding:16px 18px;font-size:19px;line-height:1.5;font-style:italic">“Listen first. Act next. Speak last.”<br><span style="font-family:Arial,sans-serif;font-style:normal;font-size:12px;color:${muted};letter-spacing:1px;text-transform:uppercase">The Malaika Path way</span></td></tr></table>
   </td></tr>
   <tr><td style="background:#2B1A13;padding:22px 32px;font-family:Arial,sans-serif;color:#C9B3A4;font-size:12px;line-height:1.6">
-    <b style="color:#F6EEE7;font-size:13px">Malaika Path</b> · Customer and citizen experience, transformation and training<br>
-    <i>Empowering Africa: one story, one letter, one word, one training at a time.</i><br><br>
-    Please do not reply to this email; this inbox is not monitored. For any question, call the ${who} on <b style="color:#F6EEE7">${phone}</b>.<br>
-    Your answers are confidential and are used only to make work better in ${LEISH_FULL}.
+    <b style="color:#F6EEE7;font-size:13px">Malaika Path</b> · <i>Empowering Africa, one story at a time.</i><br>
+    No reply needed; this inbox is not monitored. Questions? Call <b style="color:#F6EEE7">${phone}</b>.<br>
+    Your answers are confidential.
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
