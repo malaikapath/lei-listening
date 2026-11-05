@@ -81,14 +81,16 @@ button,input,select,textarea{font:inherit;color:inherit}
 .promises{display:grid;gap:10px;margin-top:20px}
 .promise{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;font-size:15.5px}
 .promise i{width:28px;height:28px;border-radius:8px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:14px}
+.winshout{font-size:clamp(28px,7vw,40px)!important;line-height:1.08;font-weight:800;color:var(--brand)}
+.mailshout{margin:4px 0 0;font-size:clamp(20px,5vw,24px);font-weight:800;color:var(--gold-ink)}
 .howto{list-style:none;counter-reset:h;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;font-size:13.5px;line-height:1.4;color:var(--muted)}
 .howto li{counter-increment:h;display:grid;grid-template-columns:20px minmax(0,1fr);gap:6px}
 .howto li::before{content:counter(h);width:18px;height:18px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-family:var(--mono);margin-top:1px}
 .howto b,.howto-alt b{color:var(--ink,inherit);font-weight:600}
 .howto-alt{margin:8px 0 0;font-size:13px;line-height:1.45;color:var(--muted)}
 @media (max-width:520px){.howto{grid-template-columns:minmax(0,1fr)}}
-.teaser{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center;text-align:left;margin:22px auto 4px;max-width:460px;padding:16px 18px;border:2px dashed var(--gold);border-radius:16px;background:color-mix(in srgb,var(--gold) 9%,var(--surface))}
-.teaser .cup{width:52px;height:52px}.teaser div{display:grid;gap:3px}.teaser b{font-size:16.5px;line-height:1.35}.teaser span:last-child{font-size:14px;color:var(--muted);line-height:1.45}
+.teaser{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;align-items:center;text-align:left;margin:22px auto 4px;max-width:460px;padding:16px 18px;border:2px dashed var(--gold);border-radius:16px;background:color-mix(in srgb,var(--gold) 9%,var(--surface))}
+.teaser .cup{width:52px;height:52px}.teaser div{display:grid;gap:3px}.teaser .shout{font-size:clamp(22px,5.6vw,27px);line-height:1.15;font-weight:800;color:var(--brand);letter-spacing:-.01em}.teaser .shout2{font-size:17px;line-height:1.35;color:var(--ink);font-weight:600}.teaser .shout2 b{color:var(--gold-ink)}.teaser span:last-child{font-size:14px;color:var(--muted);line-height:1.45}
 .reward{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
 .reward .ticket{display:flex;gap:14px;align-items:center}
 .cup{width:64px;height:64px;flex:none}
@@ -297,9 +299,8 @@ const DEFAULTS = {
     {q:'Is there anything else you would like us to know?', p:'Anything we did not ask. This space is yours. You can skip it if you have said it all.', n:[], t:0, optional:true}
   ],
   rewards: [
-    {key:'cj', name:'Caf\u00e9 Javas breakfast voucher', count:5, howTo:'Show this code at any Caf\u00e9 Javas branch to redeem it.'},
-    {key:'endiro', name:'Endiro breakfast combo', count:10, howTo:'Show this code at any Endiro Coffee branch to redeem it.'},
-    {key:'office', name:'Freedom voice and data voucher (UGX 8,000)', count:35, howTo:'Load this voucher code on your phone using the instructions in your email.'}
+    {key:'cj', name:'Caf\u00e9 Javas breakfast voucher', count:3, howTo:'Show this code at any Caf\u00e9 Javas branch to enjoy your breakfast. Valid for three months.'},
+    {key:'shop', name:'Shopping voucher worth UGX 20,000', count:30, auto:true, howTo:'Collect your shopping voucher in person from the Malaika Path project coordinator, Druscilla Kyeswa (0772 550 134). Malaika Path is on site every week, so you can pick it up then. Bring this code.'}
   ],
   fullThreshold: 75,
   rewardsLive: false,
@@ -443,7 +444,7 @@ function renderWelcome(){
       <p class="dir"><b>${esc(s.shortName)}</b> (${esc(s.directorateName.replace(/^Directorate of /,''))})</p>
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
-      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">A thank-you is waiting</span><b>Finish all six questions and a reward is yours.</b><span>The first people to answer in full get the best of it. You find out what it is at the end.</span></div></div>`}
+      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 win a Café Javas breakfast!</b><span class="shout2">The next 30 win a <b>UGX 20,000</b> shopping voucher.</span><span>Answer all six questions in full. Your reward comes straight to your email.</span></div></div>`}
       <div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
@@ -692,24 +693,25 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and there is a thank-you waiting at the end. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and the first 33 to finish win a reward. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
-  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">A thank-you is on its way</span><h3 style="font-size:22px">We will email you at ${esc(P.profile.email)}</h3><span>Thank you for being one of the first to share.</span></div>`;
+  const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
+  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You unlocked a reward!</h3>${MAIL}</div>`;
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
     const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Awaiting approval' ? `<span>Because this is not a Directorate email address, the Malaika Path team will confirm you are part of the team, then send your reward to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Redeemed' ? `<span>Already collected. Thank you.</span>`
       : `<span>Your voucher is being prepared and will reach <b>${esc(P.profile.email)}</b> shortly.</span>`;
-    card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">A thank-you for you</span><h3 style="font-size:24px">${esc(rg.name || 'A thank-you from Malaika Path')}</h3>${status}</div>`;
+    card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">You won!</span><h3 class="winshout">${esc(rg.name || 'A thank-you from Malaika Path')}</h3>${r.rewardStatus==='Redeemed'?'':MAIL}${status}</div>`;
   }
   $('#root').innerHTML = brandBand() + `<main class="wrap narrow"><section class="done">
     <span class="eyebrow">Received</span>
     <h1 style="font-size:clamp(32px,5vw,50px)">Thank you, ${esc(first)}. We heard you.</h1>
     <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
     ${card}
-    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">Everyone who takes part finds a thank-you at the end.</p>
+    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">The first 33 to finish win a reward. Share it while places last.</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
       <div class="linkbox" id="msgbox">${esc(msg)}</div></div>
     <p class="hint">For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>

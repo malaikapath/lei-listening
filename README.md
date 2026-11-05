@@ -2,7 +2,7 @@
 
 A Malaika Path tool for the **LEISH Directorate**: the Directorate of Labour, Employment Services, Industrial Relations and OSH at the Ministry of Gender, Labour and Social Development.
 
-Staff sign up once with their name, email, role and unit, and receive a personal code by email to come back with. They answer six questions by speaking (English or Kiswahili) or typing. At the end they discover a thank-you from the reward ladder: the first 5 full responses get a Café Javas breakfast voucher (UGX 34,000), the next 10 an Endiro breakfast combo (UGX 15,000), and the next 35 a Freedom voice and data voucher (UGX 8,000). Short answers go to the last step. Rewards are emailed from malaikapath@gmail.com (no reply). The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
+Staff sign up once with their name, email, role and unit, and receive a personal code by email to come back with. They answer six questions by speaking (English or Kiswahili) or typing. At the end they discover their reward: the first 3 full responses after launch get a Café Javas breakfast voucher (valid three months, any branch), and the next 30 a UGX 20,000 shopping voucher, collected in person from the Malaika Path project coordinator, Druscilla Kyeswa (0772 550 134), who is on site every week. Short answers go to the shopping voucher. During testing every tester receives the full reward email marked TEST, with a sample code; test conversations never take a real reward. Rewards are emailed from malaikapath@gmail.com (no reply). The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
 
 | Who | Link |
 |---|---|
@@ -25,7 +25,7 @@ Staff sign up once with their name, email, role and unit, and receive a personal
 
 ## Loading voucher codes
 
-In the control room, go to **Rewards > Load voucher codes**, choose the reward, and paste the codes one per line (a single column copied from Excel works). Each code is issued once, in completion order. Load each reward type separately.
+In the control room, go to **Rewards > Load voucher codes**, choose the reward, and paste the codes one per line (a single column copied from Excel works). Each code is issued once, in completion order. Load each reward type separately. Only the Café Javas vouchers need codes; the shopping voucher gets its own collection code automatically.
 
 ## Day to day
 

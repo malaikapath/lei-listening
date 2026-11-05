@@ -170,7 +170,7 @@ function apiPublic(){
   rs.filter(r => r.status === 'submitted').forEach(r => units[r.unit] = (units[r.unit]||0) + 1);
   const fullUnlocked = rs.filter(r => r.status === 'submitted' && r.tier && r.tier !== 'none').length;
   const appUrl = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
-  return { settings: settings_(), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, appUrl };
+  return { settings: Object.assign({}, settings_(), {rewards: ladder_()}), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, appUrl };
 }
 
 /** Called once, after the "About you" page. Returns the session to continue. */
@@ -244,12 +244,12 @@ function apiSubmit(id){
 
 /* The reward ladder: rewards go out in order of completion. Full answers take the next
    rung that still has places; short answers go to the last rung. count 0 = no limit. */
+const LADDER_VERSION = 3;
 const LADDER_DEFAULT = [
-  {key:'cj', name:'Café Javas breakfast voucher', count:5, howTo:'Show this code at any Café Javas branch to redeem it.'},
-  {key:'endiro', name:'Endiro breakfast combo', count:10, howTo:'Show this code at any Endiro Coffee branch to redeem it.'},
-  {key:'office', name:'Freedom voice and data voucher (UGX 8,000)', count:35, howTo:'Load this voucher code on your phone using the instructions in your email.'}
+  {key:'cj', name:'Café Javas breakfast voucher', count:3, howTo:'Show this code at any Café Javas branch to enjoy your breakfast. Valid for three months.'},
+  {key:'shop', name:'Shopping voucher worth UGX 20,000', count:30, auto:true, howTo:'Collect your shopping voucher in person from the Malaika Path project coordinator, Druscilla Kyeswa (0772 550 134). Malaika Path is on site every week, so you can pick it up then. Bring this code.'}
 ];
-function ladder_(){ const l = setting_('rewards', LADDER_DEFAULT); return (Array.isArray(l) && l.length) ? l : LADDER_DEFAULT; }
+function ladder_(){ if(Number(setting_('ladderVersion', 0)) !== LADDER_VERSION) return LADDER_DEFAULT; const l = setting_('rewards', LADDER_DEFAULT); return (Array.isArray(l) && l.length) ? l : LADDER_DEFAULT; }
 function rung_(key){ return ladder_().find(x => x.key === key) || ladder_()[ladder_().length-1]; }
 function pickRung_(full){
   const L = ladder_(); if(!full) return L[L.length-1].key;
@@ -274,7 +274,8 @@ function emailReward_(r, test){
   if(!r.email || !r.tier || r.tier === 'none') return;
   const rg = rung_(r.tier), reward = rg.name, first = String(r.name||'').split(' ')[0] || 'colleague';
   let line;
-  if(r.rewardStatus === 'Voucher sent') line = `<p style="margin:0 0 10px">Your thank-you: <b>${reward}</b>.</p>
+  if(r.rewardStatus === 'Voucher sent') line = `<p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#C98A12;font-weight:bold">You won</p>
+      <p style="margin:0 0 12px;font-size:30px;line-height:1.15;color:#B4441B;font-weight:bold">${reward}!</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 12px"><tr><td style="background:#F7ECD3;border:2px dashed #C98A12;border-radius:12px;padding:16px 24px;font-family:'Courier New',monospace;font-size:26px;letter-spacing:5px;color:#5A3D05;font-weight:bold">${r.voucher}</td></tr></table>
       <p style="margin:0 0 14px;font-size:14px;color:#6B5F57">${rg.howTo || ''}</p>`;
   else if(r.rewardStatus === 'Awaiting approval') line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. We will confirm your work details, then send your voucher here.</p>`;
@@ -282,9 +283,9 @@ function emailReward_(r, test){
   const body = `<p style="margin:0 0 14px">Dear ${first},</p>
     <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
-    <p style="margin:0 0 6px">Tell a colleague: there is a thank-you for everyone who takes part.</p>`;
+    <p style="margin:0 0 6px">Tell a colleague: the first 33 to finish win a reward.</p>`;
   const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.</td></tr></table>` : '';
-  sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Your voice now shapes what comes next.', body: testNote + body}));
+  sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'You won, ' + first + '!', standfirst:'Thank you. Your voice now shapes what comes next.', body: testNote + body}));
 }
 /* Testing mode: rewards are off, but every tester still gets the full reward email, marked TEST,
    showing the rung they would have reached in completion order. No voucher code is used up. */
@@ -427,6 +428,7 @@ function apiAdminSaveSettings(key, obj){
   return lock_(() => saveSettings_(obj));
 }
 function saveSettings_(obj){
+  if(obj && obj.rewards) obj.ladderVersion = LADDER_VERSION;
   {
     const sh = sh_('settings'); const existing = rows_('settings');
     Object.keys(obj).forEach(k => {
@@ -475,24 +477,19 @@ function apiAdminAddVouchers(key, tier, text){
   return {added: codes.length, sent: sent.length};
 }
 
-/** Testing is over: switch rewards on. Anyone who already finished gets a reward, in the order they finished. */
+/** Testing is over: switch rewards on. Test conversations never take a real reward, so the
+    first real finishers after launch get the first rewards. */
 function apiAdminRelease(key){
   isAdmin_(key);
-  const out = lock_(() => {
+  const n = lock_(() => {
     saveSettings_({rewardsLive: true});
-    const done = [];
-    rows_('responses').filter(r => r.status === 'submitted' && r.rewardStatus === 'Rewards not open yet')
-      .sort((a,b) => String(a.updated).localeCompare(String(b.updated)))
-      .forEach(r => {
-        r.tier = pickRung_(Number(r.depth) >= Number(setting_('fullThreshold', 75)));
-        if(r.verified !== 'yes' && setting_('approveUnverified', true) !== false) r.rewardStatus = 'Awaiting approval'; else assignVoucher_(r);
-        writeRow_('responses', r, r._row); done.push(r);
-      });
-    log_('admin','rewards switched on', done.length + ' early finishers rewarded');
-    return done;
+    let k = 0;
+    rows_('responses').filter(r => r.status === 'submitted' && r.rewardStatus === 'Rewards not open yet').forEach(r => {
+      r.tier = ''; r.rewardStatus = 'Test (no reward)'; writeRow_('responses', r, r._row); k++; });
+    log_('admin','rewards switched on', k + ' test conversations kept without rewards');
+    return k;
   });
-  out.forEach(emailReward_);
-  return {released: out.length};
+  return {released: 0, tests: n};
 }
 /** Removes one response for good, e.g. a test. */
 function apiAdminDelete(key, id){
