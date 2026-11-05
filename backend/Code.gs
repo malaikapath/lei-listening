@@ -17,7 +17,7 @@
 const PROPS = PropertiesService.getScriptProperties();
 const TABS = {
   responses: ['id','created','updated','status','mode','interviewer','name','email','title','unit','level','phone','ref','verified','dupFlag',
-              'a1','a2','a3','a4','a5','a6','w1','w2','w3','w4','w5','w6','depth','tier','rewardStatus','voucher','rewardSentAt','device'],
+              'a1','a2','a3','a4','a5','a6','w1','w2','w3','w4','w5','w6','depth','tier','rewardStatus','voucher','rewardSentAt','device','code'],
   settings:  ['key','value'],
   vouchers:  ['code','tier','status','assignedTo','assignedName','assignedAt','note'],
   staff:     ['name','email','unit','title'],
@@ -58,9 +58,9 @@ function doPost(e){
 }
 function json_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function route_(fn, args){
-  const allowed = {apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
+  const allowed = {apiSignup:1, apiLogin:1, apiChangeCode:1, apiResendCode:1, apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
   if(!allowed[fn]) return {error:'Unknown action'};
-  const API = {apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
+  const API = {apiSignup, apiLogin, apiChangeCode, apiResendCode, apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
   try{ return {ok:true, data: API[fn].apply(null, args)}; }
   catch(err){ return {error: err.message || String(err)}; }
 }
@@ -69,7 +69,8 @@ function route_(fn, args){
 function ss_(){ return SpreadsheetApp.openById(PROPS.getProperty('SHEET_ID')); }
 function sh_(n){ return ss_().getSheetByName(n); }
 function rows_(n){
-  const sh = sh_(n), v = sh.getDataRange().getValues(), h = v.shift();
+  const sh = sh_(n), v = sh.getDataRange().getValues(); let h = v.shift();
+  if(h.length < TABS[n].length || h.join() !== TABS[n].join()){ sh.getRange(1,1,1,TABS[n].length).setValues([TABS[n]]).setFontWeight('bold'); h = TABS[n]; }
   return v.map((r,i) => { const o = {_row:i+2}; h.forEach((k,j) => o[k] = r[j] instanceof Date ? r[j].toISOString() : r[j]); return o; });
 }
 function writeRow_(n, obj, rowNum){
@@ -113,11 +114,66 @@ function depth_(r){
   return Math.round(score);
 }
 
+
+/* ------------------------------------------------------------------ sign up and personal codes */
+function newCode_(){ const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let o = ''; for(let i=0;i<6;i++) o += c[Math.floor(Math.random()*c.length)]; return o; }
+function apiSignup(profile){
+  const res = lock_(() => {
+    const email = normEmail_(profile.email);
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Please check your email address.');
+    if(!String(profile.name||'').trim() || !String(profile.title||'').trim() || !profile.unit) throw new Error('Please fill in your name, role and unit.');
+    const isVer = verified_(email);
+    if(setting_('accessMode','open') === 'list' && !isVer) throw new Error('This email is not on the Directorate staff list. Use your work email, or call the project coordinator.');
+    const rs = rows_('responses');
+    if(rs.some(r => normEmail_(r.email) === email)) throw new Error('This email is already signed up. Tap "I have my code" to continue, or ask us to email your code again.');
+    const dupName = rs.some(r => normName_(r.name) && normName_(r.name) === normName_(profile.name));
+    const row = { id: 'r' + Utilities.getUuid().replace(/-/g,'').slice(0,9), created: now_(), updated: now_(), status:'in_progress',
+      mode: profile.mode === 'interviewer' ? 'Interviewer-led' : 'Self-completed', interviewer: profile.interviewer || '',
+      name: String(profile.name).trim(), email, title: String(profile.title).trim(), unit: profile.unit, level: levelFromTitle_(profile.title),
+      phone: '', ref: profile.ref || '', verified: isVer ? 'yes' : 'no', dupFlag: dupName ? 'Same name as another response' : '',
+      device: String(profile.device||'').slice(0,120), code: newCode_() };
+    writeRow_('responses', row);
+    log_(email, 'signed up', row.unit + ' · ' + row.title);
+    return row;
+  });
+  emailCode_(res);
+  return {id: res.id, code: res.code, emailed: true};
+}
+function apiLogin(email, code){
+  const r = rows_('responses').find(x => normEmail_(x.email) === normEmail_(email));
+  if(!r || String(r.code).toUpperCase() !== String(code||'').trim().toUpperCase()) throw new Error('That email and code do not match. Check the code in your email, or tap "Email me my code".');
+  if(r.status === 'submitted') return {done:true, tier:r.tier, rewardStatus:r.rewardStatus, voucher:r.voucher, name:r.name};
+  return {id:r.id, answers:[1,2,3,4,5,6].map(i => r['a'+i] || ''), profile:{name:r.name, email:r.email, title:r.title, unit:r.unit}};
+}
+function apiChangeCode(id, code){
+  code = String(code||'').trim().toUpperCase();
+  if(!/^[A-Z0-9]{4,20}$/.test(code)) throw new Error('Use 4 to 20 letters or numbers, with no spaces.');
+  return lock_(() => { const r = rows_('responses').find(x => x.id === id); if(!r) throw new Error('Session not found.');
+    r.code = code; writeRow_('responses', r, r._row); log_(r.email, 'changed code', ''); return true; });
+}
+function apiResendCode(email){
+  const r = rows_('responses').find(x => normEmail_(x.email) === normEmail_(email));
+  if(r) emailCode_(r);
+  return true; // same answer either way, so nobody can test which emails are signed up
+}
+function emailCode_(r){
+  const s = settings_();
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#231A15;line-height:1.55">
+    <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6B5F57"><b>${s.shortName || 'LEISH'}</b> · Ministry of Gender, Labour and Social Development · powered by Malaika Path</p>
+    <h2 style="margin:6px 0 12px">Your personal code</h2>
+    <p>Hello ${String(r.name||'').split(' ')[0]}, thank you for joining <i>Listening to Our Team</i>. Use this code with your email to come back and continue at any time:</p>
+    <p style="font-size:28px;letter-spacing:6px;font-family:monospace;background:#F7ECD3;padding:12px 18px;border-radius:8px;display:inline-block">${r.code}</p>
+    <p><a href="https://rebekahzadokmugisha-boop.github.io/lei-listening/">Open Listening to Our Team</a></p>
+    <p style="background:#F6F4F0;padding:10px 12px;border-radius:8px;font-size:13px">Please do not reply to this email; this inbox is not monitored. For any question, call the ${s.contactName || 'Malaika Path project coordinator'} on <b>${s.contactPhone || '0772 550 134'}</b>.</p></div>`;
+  try{ MailApp.sendEmail({to:r.email, subject:'Your code · Listening to Our Team', htmlBody:html, name:'Malaika Path (no reply)'}); log_('system','code email', r.email); }
+  catch(e){ log_('system','code email failed', r.email + ' · ' + e.message); }
+}
+
 /* ------------------------------------------------------------------ public API */
 function apiPublic(){
   const rs = rows_('responses'), units = {};
   rs.filter(r => r.status === 'submitted').forEach(r => units[r.unit] = (units[r.unit]||0) + 1);
-  const fullUnlocked = rs.filter(r => r.tier === 'full').length;
+  const fullUnlocked = rs.filter(r => r.status === 'submitted' && r.tier && r.tier !== 'none').length;
   const appUrl = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
   return { settings: settings_(), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, appUrl };
 }
@@ -176,7 +232,7 @@ function apiSubmit(id){
     r.status = 'submitted'; r.updated = now_();
     if(r.mode === 'Interviewer-led'){ r.tier = 'none'; r.rewardStatus = 'Not eligible (interviewer-led)'; }
     else {
-      r.tier = r.depth >= Number(setting_('fullThreshold', 75)) ? 'full' : 'thanks';
+      r.tier = pickRung_(r.depth >= Number(setting_('fullThreshold', 75)));
       const needsApproval = r.verified !== 'yes' && setting_('approveUnverified', true) !== false;
       if(needsApproval){ r.rewardStatus = 'Awaiting approval'; }
       else assignVoucher_(r);
@@ -189,7 +245,24 @@ function apiSubmit(id){
   return {tier:res.tier, rewardStatus:res.rewardStatus, voucher:res.voucher, depth:res.depth};
 }
 
+/* The reward ladder: rewards go out in order of completion. Full answers take the next
+   rung that still has places; short answers go to the last rung. count 0 = no limit. */
+const LADDER_DEFAULT = [
+  {key:'cj', name:'Café Javas breakfast combo: a croissant and hot chocolate', count:5, howTo:'Show this code at any Café Javas branch to redeem it.'},
+  {key:'endiro', name:'Endiro Coffee breakfast combo', count:10, howTo:'Show this code at any Endiro Coffee branch to redeem it.'},
+  {key:'office', name:'A thank-you gift from the Minister’s office', count:35, howTo:'Take this code to the Minister’s office to collect your gift. The project coordinator will confirm the time.', auto:true}
+];
+function ladder_(){ const l = setting_('rewards', LADDER_DEFAULT); return (Array.isArray(l) && l.length) ? l : LADDER_DEFAULT; }
+function rung_(key){ return ladder_().find(x => x.key === key) || ladder_()[ladder_().length-1]; }
+function pickRung_(full){
+  const L = ladder_(); if(!full) return L[L.length-1].key;
+  const taken = {}; rows_('responses').filter(x => x.status === 'submitted').forEach(x => taken[x.tier] = (taken[x.tier]||0) + 1);
+  const r = L.find(x => !Number(x.count) || (taken[x.key]||0) < Number(x.count));
+  return (r || L[L.length-1]).key;
+}
 function assignVoucher_(r){
+  const rg = rung_(r.tier);
+  if(rg.auto){ r.voucher = 'LEISH-' + Utilities.getUuid().replace(/-/g,'').slice(0,5).toUpperCase(); r.rewardStatus = 'Voucher sent'; r.rewardSentAt = now_(); return; }
   const v = rows_('vouchers').find(x => x.tier === r.tier && (!x.status || x.status === 'available'));
   if(v){
     v.status = 'issued'; v.assignedTo = r.email; v.assignedName = r.name; v.assignedAt = now_();
@@ -204,20 +277,20 @@ function emailReward_(r){
   if(!r.email) return;
   const s = settings_();
   const dir = s.directorateName || 'Directorate of Labour, Employment Services, Industrial Relations and OSH';
-  const reward = r.tier === 'full' ? (s.rewardFull || 'Breakfast combo at Café Javas (croissant and hot chocolate)') : (s.rewardThanks || 'A thank-you airtime top-up');
+  const rg = rung_(r.tier), reward = rg.name;
   const first = String(r.name||'').split(' ')[0] || 'colleague';
   let line;
   if(r.tier === 'none') return;
-  if(r.rewardStatus === 'Voucher sent') line = `<p>Your reward: <b>${reward}</b>.</p><p style="font-size:22px;letter-spacing:2px;font-family:monospace;background:#F3EEDD;padding:12px 16px;border-radius:8px;display:inline-block">${r.voucher}</p><p>${s.rewardHowTo || 'Show this code at any Café Javas branch to redeem.'}</p>`;
+  if(r.rewardStatus === 'Voucher sent') line = `<p>Your reward: <b>${reward}</b>.</p><p style="font-size:22px;letter-spacing:2px;font-family:monospace;background:#F3EEDD;padding:12px 16px;border-radius:8px;display:inline-block">${r.voucher}</p><p>${rg.howTo || ''}</p>`;
   else if(r.rewardStatus === 'Awaiting approval') line = `<p>You have unlocked <b>${reward}</b>. Because you used a personal email address, the Malaika Path team will confirm you are part of the Directorate and then send your voucher here.</p>`;
   else line = `<p>You have unlocked <b>${reward}</b>. Your voucher code is being prepared and will reach this inbox shortly.</p>`;
-  const more = r.tier === 'thanks' ? `<p style="color:#555">You answered briefly, so this is our thank-you reward. Fuller answers unlock the breakfast reward.</p>` : '';
+  const more = '';
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1d2a26;line-height:1.55">
-    <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#B4441B"><b>Malaika Path</b> · ${s.shortName ? s.shortName + ' · ' : ''}${dir}</p>
+    <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6B5F57"><b>${s.shortName || 'LEISH'}</b> · ${dir} · powered by Malaika Path</p>
     <h2 style="margin:6px 0 12px">Thank you, ${first}. You have unlocked a reward.</h2>
     <p>We received your answers to <i>Listening to Our Team</i>. What you shared will help shape a better working environment for everyone in the Directorate, and better service for the workers and employers who come to us.</p>
     ${line}${more}
-    <p>Please tell a colleague: each person who shares fully can unlock their own reward.</p>
+    <p>Please tell a colleague: everyone who takes part finds a thank-you at the end.</p>
     <p style="background:#F6F4F0;padding:10px 12px;border-radius:8px;font-size:13px">Please do not reply to this email; this inbox is not monitored. For any question, call the ${s.contactName || 'Malaika Path project coordinator'} on <b>${s.contactPhone || '0772 550 134'}</b>.</p>
     <p style="color:#666;font-size:13px">Your answers are confidential and are used only for this improvement programme.<br>Malaika Path · Kalema Close, Bukasa Road, Kampala</p></div>`;
   try{
@@ -230,7 +303,7 @@ function emailReward_(r){
 function apiAdmin(key){
   isAdmin_(key);
   log_('admin','viewed dashboard','');
-  return { settings: settings_(), responses: rows_('responses').map(r => { delete r._row; return r; }),
+  return { settings: settings_(), responses: rows_('responses').map(r => { delete r._row; delete r.code; return r; }),
            vouchers: rows_('vouchers').map(v => { delete v._row; return v; }), staff: rows_('staff').length,
            audit: rows_('audit').slice(-60).reverse(), sheetUrl: ss_().getUrl() };
 }

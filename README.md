@@ -2,7 +2,7 @@
 
 A Malaika Path tool for the **LEISH Directorate**: the Directorate of Labour, Employment Services, Industrial Relations and OSH at the Ministry of Gender, Labour and Social Development.
 
-Staff answer six questions, by speaking (English, Luganda or Kiswahili) or by typing. Full answers unlock a Café Javas breakfast voucher, which is emailed from malaikapath@gmail.com. The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
+Staff sign up once with their name, email, role and unit, and receive a personal code by email to come back with. They answer six questions by speaking (English or Kiswahili) or typing. At the end they discover a thank-you from the reward ladder: the first 5 full responses get Café Javas breakfast, the next 10 get Endiro Coffee breakfast, and the next 35 get a gift collected from the Minister's office. Short answers go to the last step. Rewards are emailed from malaikapath@gmail.com (no reply). The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
 
 | Who | Link |
 |---|---|
