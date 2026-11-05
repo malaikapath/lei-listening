@@ -667,7 +667,7 @@ function renderDone(){
     <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">Everyone who takes part finds a thank-you at the end.</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
       <div class="linkbox" id="msgbox">${esc(msg)}</div></div>
-    <p class="hint">Please do not reply to our emails; that inbox is not monitored. For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>
+    <p class="hint">For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>
   </section></main>` + footerHtml();
   $('#copy').onclick = async () => { try{ await navigator.clipboard.writeText(msg); toast('Copied'); }catch(e){ const r2 = document.createRange(); r2.selectNodeContents($('#msgbox')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r2); toast('Selected. Copy it from here.'); } };
 }
