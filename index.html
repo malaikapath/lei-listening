@@ -294,6 +294,7 @@ const DEFAULTS = {
     {key:'office', name:'A thank-you gift from the Minister\u2019s office', count:35, howTo:'Take this code to the Minister\u2019s office to collect your gift. The project coordinator will confirm the time.', auto:true}
   ],
   fullThreshold: 75,
+  rewardsLive: false,
   allowedDomains: 'mglsd.go.ug',
   accessMode: 'open',
   approveUnverified: true,
@@ -343,6 +344,7 @@ const Preview = {
   async apiSubmit(id){ const d = this.db(), r = d.responses.find(x=>x.id===id); if(r.status==='submitted') return r;
     r.depth = depthOf(r); r.updated = new Date().toISOString();
     if(r.mode==='Interviewer-led'){ r.tier='none'; r.rewardStatus='Not eligible (interviewer-led)'; }
+    else if(cfg().rewardsLive !== true){ r.tier=''; r.rewardStatus='Rewards not open yet'; }
     else { r.tier = pickRung(d.responses, r.depth >= cfg().fullThreshold);
       if(r.verified!=='yes' && cfg().approveUnverified) r.rewardStatus = 'Awaiting approval'; else this.give(d, r); }
     r.status = 'submitted'; this.put(d); return {tier:r.tier, rewardStatus:r.rewardStatus, voucher:r.voucher, depth:r.depth}; },
@@ -350,6 +352,10 @@ const Preview = {
   async apiAdminSaveSettings(key, obj){ const d = this.db(); Object.assign(d.settings, obj); this.put(d); return true; },
   async apiAdminApprove(key, id){ const d = this.db(), r = d.responses.find(x=>x.id===id); r.verified='approved'; this.give(d, r); this.put(d); return r.rewardStatus; },
   async apiAdminResend(){ return true; },
+  async apiAdminDelete(key, id){ const d = this.db(); d.responses = d.responses.filter(x=>x.id!==id); this.put(d); return true; },
+  async apiAdminRelease(key){ const d = this.db(); d.settings.rewardsLive = true; SETTINGS.rewardsLive = true; let n = 0;
+    d.responses.filter(r=>r.status==='submitted'&&r.rewardStatus==='Rewards not open yet').sort((a,b)=>String(a.updated).localeCompare(String(b.updated))).forEach(r => { r.tier = pickRung(d.responses, Number(r.depth) >= cfg().fullThreshold); if(r.verified!=='yes' && cfg().approveUnverified) r.rewardStatus='Awaiting approval'; else this.give(d, r); n++; });
+    this.put(d); return {released:n}; },
   async apiAdminSetStatus(key, id, st){ const d = this.db(); d.responses.find(x=>x.id===id).rewardStatus = st; this.put(d); return true; },
   async apiAdminAddVouchers(key, tier, text){ const d = this.db(), codes = text.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean); let sent = 0;
     codes.forEach(c => { if(!d.vouchers.some(v=>v.code===c)) d.vouchers.push({code:c, tier, status:'available'}); });
@@ -643,7 +649,8 @@ function renderDone(){
   const msg = `I just shared my experience in "${s.toolName}" for ${s.shortName}. It takes about 15 minutes, you can speak your answers, and there is a thank-you waiting at the end. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
-  if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
+  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">A thank-you is on its way</span><h3 style="font-size:22px">We will email you at ${esc(P.profile.email)}</h3><span>Thank you for being one of the first to share.</span></div>`;
+  else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
     const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Awaiting approval' ? `<span>Because this is not a Directorate email address, the Malaika Path team will confirm you are part of the team, then send your reward to <b>${esc(P.profile.email)}</b>.</span>`
@@ -859,8 +866,11 @@ function openPerson(id){
   const r = A.data.responses.find(x=>x.id===id), qs = cfg().questions;
   $('#overlay').innerHTML = `<div class="drawer-scrim" id="scrim"></div><aside class="sidepanel" role="dialog" aria-modal="true">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><span class="eyebrow">${esc(r.unit)} · ${esc(r.level)}</span><h3 style="font-size:24px">${who(r)}</h3><p class="hint">${esc(r.title)} · ${esc(r.mode)}${A.showNames?' · '+esc(r.email)+(r.phone?' · '+esc(r.phone):''):''}</p></div><button class="btn small" id="cl" type="button">Close</button></div>
-    ${qs.map((Q,k)=>`<div class="ans"><span class="eyebrow">Q${k+1} · ${wc(r['a'+(k+1)])} words</span><b>${esc(Q.q)}</b><p>${esc(r['a'+(k+1)]) || '<span class="hint">No answer yet</span>'}</p></div>`).join('')}</aside>`;
+    ${qs.map((Q,k)=>`<div class="ans"><span class="eyebrow">Q${k+1} · ${wc(r['a'+(k+1)])} words</span><b>${esc(Q.q)}</b><p>${esc(r['a'+(k+1)]) || '<span class="hint">No answer yet</span>'}</p></div>`).join('')}
+    <div class="ans"><span class="eyebrow">For tests only</span><button class="btn small" id="del" type="button" style="justify-self:start;color:var(--bad)">Delete this response</button></div></aside>`;
   $('#scrim').onclick = closeOverlay; $('#cl').onclick = closeOverlay;
+  $('#del').onclick = async () => { const b = $('#del'); if(!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete for good'; return; }
+    try{ await api('apiAdminDelete', A.key, id); closeOverlay(); toast('Deleted'); loadAdmin(); }catch(e){ toast(e.message); } };
 }
 async function exportCsv(){
   const cols = ['id','created','updated','status','mode','interviewer','name','email','title','unit','level','phone','verified','depth','tier','rewardStatus','voucher','a1','a2','a3','a4','a5','a6'];
@@ -930,7 +940,8 @@ function secRecs(){
 function secRewards(){
   const s = cfg(), L = ladder(), subs = A.data.responses.filter(r=>r.status==='submitted'), vs = A.data.vouchers || [];
   const waiting = subs.filter(r=>r.rewardStatus==='Unlocked, voucher to follow'), pending = subs.filter(r=>r.rewardStatus==='Awaiting approval');
-  $('#sec').innerHTML = `<div class="sec-head"><div><span class="eyebrow">Rewards</span><h2>The reward ladder</h2><p class="hint" style="margin-top:6px">Rewards go out in order of completion to people who answer fully. Short answers go to the last step. Staff only discover their reward at the end.</p></div></div>${sampleNote()}
+  const early = subs.filter(r=>r.rewardStatus==='Rewards not open yet');
+  $('#sec').innerHTML = (s.rewardsLive === true ? '' : `<div class="note" style="margin-top:20px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span><b>Testing mode: rewards are off.</b> Finished conversations are saved but no reward is given or emailed. ${early.length} ${early.length===1?"person is":"people are"} waiting. Delete test responses under People first, load your voucher codes, then switch rewards on. Everyone waiting gets their reward in the order they finished.</span><button class="btn gold" id="release" type="button">Switch rewards on</button></div>`) + `<div class="sec-head"><div><span class="eyebrow">Rewards</span><h2>The reward ladder</h2><p class="hint" style="margin-top:6px">Rewards go out in order of completion to people who answer fully. Short answers go to the last step. Staff only discover their reward at the end.</p></div></div>${sampleNote()}
     <div class="kpis" style="margin-top:12px;grid-template-columns:repeat(${Math.min(5, L.length+2)},minmax(0,1fr))">
       ${L.map((x,i) => { const n = subs.filter(r=>r.tier===x.key).length, av = vs.filter(v=>v.tier===x.key && (!v.status||v.status==='available')).length;
         return `<div class="kpi"><span class="eyebrow">Step ${i+1}</span><b style="font-size:14px">${esc(x.name)}</b><span class="v">${n}<small> / ${x.count||'∞'}</small></span><span class="hint">${x.auto ? 'collection code made automatically' : av + ' voucher codes ready'}</span></div>`; }).join('')}
@@ -940,7 +951,7 @@ function secRewards(){
     <div class="cols">
       <div class="panel"><div class="panel-head"><h3>People and their rewards</h3></div><div class="tscroll"><table><thead><tr><th>Name</th><th>Unit</th><th>Reward</th><th>Status</th><th>Code</th><th></th></tr></thead><tbody>
         ${subs.filter(r=>r.tier!=='none').sort((a,b)=>(a.rewardStatus==='Awaiting approval'?-1:1)).map(r=>`<tr><td><b>${who(r)}</b><br><span class="hint">${esc(r.email)}</span></td><td>${esc(r.unit)}</td><td>${esc(rungName(r.tier))}</td>
-          <td>${r.rewardStatus==='Voucher sent'?'<span class="pill p-ok">Sent</span>':r.rewardStatus==='Awaiting approval'?'<span class="pill p-warn">Awaiting approval</span>':r.rewardStatus==='Redeemed'?'<span class="pill p-none">Collected</span>':'<span class="pill p-info">Code to follow</span>'}</td>
+          <td>${r.rewardStatus==='Rewards not open yet'?'<span class="pill p-none">Waiting for rewards</span>':r.rewardStatus==='Voucher sent'?'<span class="pill p-ok">Sent</span>':r.rewardStatus==='Awaiting approval'?'<span class="pill p-warn">Awaiting approval</span>':r.rewardStatus==='Redeemed'?'<span class="pill p-none">Collected</span>':'<span class="pill p-info">Code to follow</span>'}</td>
           <td class="num">${esc(r.voucher||'')}</td><td style="white-space:nowrap">${r.rewardStatus==='Awaiting approval'?`<button class="btn small primary" data-approve="${esc(r.id)}" type="button">Approve</button>`:''}${r.rewardStatus==='Voucher sent'?`<button class="btn small" data-resend="${esc(r.id)}" type="button">Resend</button> <button class="btn small" data-redeem="${esc(r.id)}" type="button">Mark collected</button>`:''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No rewards unlocked yet.</td></tr>'}
       </tbody></table></div></div>
       <div class="panel"><div class="panel-head"><h3>Load voucher codes</h3></div><div class="panel-body" style="display:grid;gap:12px">
@@ -949,6 +960,8 @@ function secRewards(){
         <div class="field"><label for="vc">Codes</label><textarea id="vc" style="min-height:140px" placeholder="CJ-0001&#10;CJ-0002"></textarea></div>
         <button class="btn gold" id="addv" type="button">Add codes and send to waiting people</button></div></div>
     </div><div style="height:50px"></div>`;
+  const rel = $('#release'); if(rel) rel.onclick = async () => { if(!rel.dataset.sure){ rel.dataset.sure = '1'; rel.textContent = 'Tap again to confirm: rewards go live now'; return; }
+    rel.disabled = true; try{ const r = await api('apiAdminRelease', A.key); SETTINGS.rewardsLive = true; toast(`Rewards are on · ${r.released} early finishers rewarded`); loadAdmin(); }catch(e){ toast(e.message); rel.disabled = false; } };
   $('#addv').onclick = async () => { const t = $('#vc').value; if(!t.trim()) return toast('Paste at least one code'); try{ const r = await api('apiAdminAddVouchers', A.key, $('#vt').value, t); toast(`${r.added} codes added · ${r.sent} sent`); loadAdmin(); }catch(e){ toast(e.message); } };
   document.querySelectorAll('[data-approve]').forEach(b => b.onclick = async () => { b.disabled = true; try{ await api('apiAdminApprove', A.key, b.dataset.approve); toast('Approved'); loadAdmin(); }catch(e){ toast(e.message); b.disabled = false; } });
   document.querySelectorAll('[data-resend]').forEach(b => b.onclick = async () => { try{ await api('apiAdminResend', A.key, b.dataset.resend); toast('Email sent again'); }catch(e){ toast(e.message); } });

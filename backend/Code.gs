@@ -58,9 +58,9 @@ function doPost(e){
 }
 function json_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function route_(fn, args){
-  const allowed = {apiSignup:1, apiLogin:1, apiChangeCode:1, apiResendCode:1, apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
+  const allowed = {apiAdminRelease:1, apiAdminDelete:1, apiSignup:1, apiLogin:1, apiChangeCode:1, apiResendCode:1, apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
   if(!allowed[fn]) return {error:'Unknown action'};
-  const API = {apiSignup, apiLogin, apiChangeCode, apiResendCode, apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
+  const API = {apiAdminRelease, apiAdminDelete, apiSignup, apiLogin, apiChangeCode, apiResendCode, apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
   try{ return {ok:true, data: API[fn].apply(null, args)}; }
   catch(err){ return {error: err.message || String(err)}; }
 }
@@ -231,6 +231,7 @@ function apiSubmit(id){
     r.depth = depth_(r);
     r.status = 'submitted'; r.updated = now_();
     if(r.mode === 'Interviewer-led'){ r.tier = 'none'; r.rewardStatus = 'Not eligible (interviewer-led)'; }
+    else if(setting_('rewardsLive', false) !== true){ r.tier = ''; r.rewardStatus = 'Rewards not open yet'; }
     else {
       r.tier = pickRung_(r.depth >= Number(setting_('fullThreshold', 75)));
       const needsApproval = r.verified !== 'yes' && setting_('approveUnverified', true) !== false;
@@ -241,7 +242,7 @@ function apiSubmit(id){
     log_(r.email, 'submitted', 'depth ' + r.depth + ' · ' + r.tier + ' · ' + r.rewardStatus);
     return r;
   });
-  if(res.rewardStatus) emailReward_(res);
+  if(res.rewardStatus && res.tier) emailReward_(res);
   return {tier:res.tier, rewardStatus:res.rewardStatus, voucher:res.voucher, depth:res.depth};
 }
 
@@ -309,7 +310,10 @@ function apiAdmin(key){
 }
 function apiAdminSaveSettings(key, obj){
   isAdmin_(key);
-  return lock_(() => {
+  return lock_(() => saveSettings_(obj));
+}
+function saveSettings_(obj){
+  {
     const sh = sh_('settings'); const existing = rows_('settings');
     Object.keys(obj).forEach(k => {
       const val = JSON.stringify(obj[k]);
@@ -319,7 +323,7 @@ function apiAdminSaveSettings(key, obj){
     });
     log_('admin','saved settings', Object.keys(obj).join(', '));
     return true;
-  });
+  }
 }
 function apiAdminApprove(key, id){
   isAdmin_(key);
@@ -355,4 +359,30 @@ function apiAdminAddVouchers(key, tier, text){
   });
   sent.forEach(emailReward_);
   return {added: codes.length, sent: sent.length};
+}
+
+/** Testing is over: switch rewards on. Anyone who already finished gets a reward, in the order they finished. */
+function apiAdminRelease(key){
+  isAdmin_(key);
+  const out = lock_(() => {
+    saveSettings_({rewardsLive: true});
+    const done = [];
+    rows_('responses').filter(r => r.status === 'submitted' && r.rewardStatus === 'Rewards not open yet')
+      .sort((a,b) => String(a.updated).localeCompare(String(b.updated)))
+      .forEach(r => {
+        r.tier = pickRung_(Number(r.depth) >= Number(setting_('fullThreshold', 75)));
+        if(r.verified !== 'yes' && setting_('approveUnverified', true) !== false) r.rewardStatus = 'Awaiting approval'; else assignVoucher_(r);
+        writeRow_('responses', r, r._row); done.push(r);
+      });
+    log_('admin','rewards switched on', done.length + ' early finishers rewarded');
+    return done;
+  });
+  out.forEach(emailReward_);
+  return {released: out.length};
+}
+/** Removes one response for good, e.g. a test. */
+function apiAdminDelete(key, id){
+  isAdmin_(key);
+  return lock_(() => { const r = rows_('responses').find(x => x.id === id); if(!r) throw new Error('Not found');
+    sh_('responses').deleteRow(r._row); log_('admin','deleted response', r.email + ' · ' + r.name); return true; });
 }
