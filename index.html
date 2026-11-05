@@ -414,6 +414,8 @@ const MP_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMwAAADACAMAAAB/P
 const MP_MARK = '<img src="'+MP_LOGO+'" alt="Malaika Path">';
 const INAPP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|GSA\/|; wv\)|MicroMessenger|Snapchat|TikTok/i.test(navigator.userAgent);
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+/* Once every gift is given, the tool stops promising one. */
+function giftsOpen(){ const s = cfg(); if(s.rewardsLive !== true || !P.pub || P.pub.giftsLeft === undefined) return true; return P.pub.giftsLeft > 0; }
 const CUP = '<svg class="cup" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="var(--gold-soft)"/><path d="M14 30h26v8a11 11 0 0 1-11 11h-4a11 11 0 0 1-11-11z" fill="var(--gold)"/><path d="M40 33h3a5 5 0 0 1 0 10h-4" fill="none" stroke="var(--gold)" stroke-width="3"/><path d="M21 16c0 3 3 3 3 6M28 14c0 3 3 3 3 6" stroke="var(--gold-ink)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M38 52c4-9 14-9 18 0" fill="#E3A94A" stroke="var(--gold-ink)" stroke-width="1.6"/></svg>';
 
 function brandBand(right){
@@ -448,7 +450,7 @@ function renderWelcome(){
       <p class="dir"><b>${esc(s.shortName)}</b> (${esc(s.directorateName.replace(/^Directorate of /,''))})</p>
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
-      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 complete entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed answers do not qualify for the breakfast. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
+      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 complete entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed answers do not qualify for the breakfast. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
       <div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
@@ -591,8 +593,8 @@ async function saveCurrent(showErr){
 function paintDepth(){
   const el = $('#depth'); if(!el) return; const Q = cfg().questions[P.q]; const n = wc(P.answers[P.q]); const r = n / (Q.t||50);
   const lvl = r >= 1 ? 3 : r >= .6 ? 2 : n > 0 ? 1 : 0;
-  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.','Rich, full answer. This counts toward the breakfast!'][lvl];
-  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':'full, detailed answers win the breakfast'}</span>`;
+  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.',(giftsOpen() ? 'Rich, full answer. This counts toward the breakfast!' : 'Rich, full answer. Thank you.')][lvl];
+  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':(giftsOpen()?'full, detailed answers win the breakfast':'the more detail, the better')}</span>`;
 }
 
 /* ---------- voice: speak, cancel or tick ---------- */
@@ -678,7 +680,7 @@ function renderReview(err){
     ${err ? `<div class="err" style="margin-top:14px">${esc(err)}</div>` : ''}
     <div class="review">${s.questions.map((Q,k)=>{ const n = wc(P.answers[k]); const short = Q.t && n < Q.t*.6;
       return `<button class="card rv" type="button" data-q="${k}" style="text-align:left;cursor:pointer"><div class="rv-top"><b>${k+1}. ${esc(Q.q)}</b>${Q.t ? `<span class="pill ${short?'p-warn':'p-ok'}">${short?'Could say more':'Full'} · ${n}</span>` : ''}</div><p>${esc(P.answers[k]) || '<span class="hint">No answer</span>'}</p></button>`; }).join('')}</div>
-    <div class="qfoot" style="padding-bottom:60px"><button class="btn ghost" type="button" id="back">← Back</button><button class="btn primary" type="button" id="send" style="padding:14px 22px">🎁 Send and claim my gift</button></div>
+    <div class="qfoot" style="padding-bottom:60px"><button class="btn ghost" type="button" id="back">← Back</button><button class="btn primary" type="button" id="send" style="padding:14px 22px">${giftsOpen() ? "🎁 Send and claim my gift" : "Send my answers"}</button></div>
   </main>` + footerHtml();
   document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { P.q = +b.dataset.q; store(); renderQuestion(); });
   $('#back').onclick = () => { P.q = s.questions.length-1; renderQuestion(); };
@@ -697,11 +699,12 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 a UGX 20,000 shopping voucher. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers${giftsOpen() ? ', and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 a UGX 20,000 shopping voucher' : ''}. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
   const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
   if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You’ve won a gift!</h3>${MAIL}</div>`;
+  else if(r.rewardStatus === 'All gifts given') card = '';
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
     const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
@@ -714,7 +717,7 @@ function renderDone(){
     ${card}
     <h1 style="font-size:clamp(28px,4.4vw,42px)">Thank you, ${esc(first)}. We heard you.</h1>
     <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
-    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">33 gifts are up for grabs. The best, most detailed answers win first.</p>
+    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">${giftsOpen() ? "33 gifts are up for grabs. The best, most detailed answers win first." : "Every voice shapes what comes next."}</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
       <div class="linkbox" id="msgbox">${esc(msg)}</div></div>
     <p class="hint">For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>

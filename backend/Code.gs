@@ -169,8 +169,9 @@ function apiPublic(){
   const rs = rows_('responses'), units = {};
   rs.filter(r => r.status === 'submitted').forEach(r => units[r.unit] = (units[r.unit]||0) + 1);
   const fullUnlocked = rs.filter(r => r.status === 'submitted' && r.tier && r.tier !== 'none').length;
+  const giftsTotal = ladder_().reduce((a,x) => a + (Number(x.count) || 1e9), 0);
   const appUrl = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
-  return { settings: Object.assign({}, settings_(), {rewards: ladder_()}), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, appUrl };
+  return { settings: Object.assign({}, settings_(), {rewards: ladder_()}), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, giftsLeft: Math.max(0, giftsTotal - fullUnlocked), appUrl };
 }
 
 /** Called once, after the "About you" page. Returns the session to continue. */
@@ -229,6 +230,7 @@ function apiSubmit(id){
     else if(setting_('rewardsLive', false) !== true){ r.tier = ''; r.rewardStatus = 'Rewards not open yet'; }
     else {
       r.tier = pickRung_(r.depth >= Number(setting_('fullThreshold', 75)));
+      if(!r.tier){ r.rewardStatus = 'All gifts given'; writeRow_('responses', r, r._row); log_(r.email, 'submitted', 'depth ' + r.depth + ' · no gift left'); return r; }
       const needsApproval = r.verified !== 'yes' && setting_('approveUnverified', true) !== false;
       if(needsApproval){ r.rewardStatus = 'Awaiting approval'; }
       else assignVoucher_(r);
@@ -252,10 +254,14 @@ const LADDER_DEFAULT = [
 function ladder_(){ if(Number(setting_('ladderVersion', 0)) !== LADDER_VERSION) return LADDER_DEFAULT; const l = setting_('rewards', LADDER_DEFAULT); return (Array.isArray(l) && l.length) ? l : LADDER_DEFAULT; }
 function rung_(key){ return ladder_().find(x => x.key === key) || ladder_()[ladder_().length-1]; }
 function pickRung_(full){
-  const L = ladder_(); if(!full) return L[L.length-1].key;
+  // Full answers take the first rung with places left; short answers only the last rung.
+  // When every place is taken, nobody is promised anything (returns '').
+  const L = ladder_();
   const taken = {}; rows_('responses').filter(x => x.status === 'submitted').forEach(x => taken[x.tier] = (taken[x.tier]||0) + 1);
-  const r = L.find(x => !Number(x.count) || (taken[x.key]||0) < Number(x.count));
-  return (r || L[L.length-1]).key;
+  const open = x => !Number(x.count) || (taken[x.key]||0) < Number(x.count);
+  const pool = full ? L : L.slice(-1);
+  const r = pool.find(open);
+  return r ? r.key : '';
 }
 function assignVoucher_(r){
   const rg = rung_(r.tier);
@@ -294,9 +300,8 @@ function emailTestReward_(r){
   const L = ladder_(), full = Number(r.depth) >= Number(setting_('fullThreshold', 75));
   let key = L[L.length-1].key;
   if(full){
-    const before = rows_('responses').filter(x => x.status === 'submitted' && x.rewardStatus === 'Rewards not open yet' && x.mode !== 'Interviewer-led'
+    let n = rows_('responses').filter(x => x.status === 'submitted' && x.rewardStatus === 'Rewards not open yet' && x.mode !== 'Interviewer-led'
       && Number(x.depth) >= Number(setting_('fullThreshold', 75)) && String(x.updated) < String(r.updated)).length;
-    let n = before;
     for(const x of L){ const c = Number(x.count); if(!c || n < c){ key = x.key; break; } n -= c; }
   }
   const sample = Object.assign({}, r, {tier:key, rewardStatus:'Voucher sent', voucher:'TEST-' + Utilities.getUuid().replace(/-/g,'').slice(0,4).toUpperCase()});
