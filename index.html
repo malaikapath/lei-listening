@@ -81,6 +81,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .promises{display:grid;gap:10px;margin-top:20px}
 .promise{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;font-size:15.5px}
 .promise i{width:28px;height:28px;border-radius:8px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:14px}
+.gift{font-size:64px;line-height:1;display:block;animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.gift{animation:none}}
+.done .voucher{border:3px solid var(--gold);box-shadow:0 10px 30px color-mix(in srgb,var(--gold) 25%,transparent)}
 .winshout{font-size:clamp(28px,7vw,40px)!important;line-height:1.08;font-weight:800;color:var(--brand)}
 .mailshout{margin:4px 0 0;font-size:clamp(20px,5vw,24px);font-weight:800;color:var(--gold-ink)}
 .howto{list-style:none;counter-reset:h;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;font-size:13.5px;line-height:1.4;color:var(--muted)}
@@ -444,7 +448,7 @@ function renderWelcome(){
       <p class="dir"><b>${esc(s.shortName)}</b> (${esc(s.directorateName.replace(/^Directorate of /,''))})</p>
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
-      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 win a Café Javas breakfast!</b><span class="shout2">The next 30 win a <b>UGX 20,000</b> shopping voucher.</span><span>Answer all six questions in full. Your reward comes straight to your email.</span></div></div>`}
+      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 complete entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed answers do not qualify for the breakfast. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
       <div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
@@ -587,8 +591,8 @@ async function saveCurrent(showErr){
 function paintDepth(){
   const el = $('#depth'); if(!el) return; const Q = cfg().questions[P.q]; const n = wc(P.answers[P.q]); const r = n / (Q.t||50);
   const lvl = r >= 1 ? 3 : r >= .6 ? 2 : n > 0 ? 1 : 0;
-  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.','Rich, full answer. Thank you.'][lvl];
-  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':'full answers unlock the bigger thank-you'}</span>`;
+  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.','Rich, full answer. This counts toward the breakfast!'][lvl];
+  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':'full, detailed answers win the breakfast'}</span>`;
 }
 
 /* ---------- voice: speak, cancel or tick ---------- */
@@ -674,7 +678,7 @@ function renderReview(err){
     ${err ? `<div class="err" style="margin-top:14px">${esc(err)}</div>` : ''}
     <div class="review">${s.questions.map((Q,k)=>{ const n = wc(P.answers[k]); const short = Q.t && n < Q.t*.6;
       return `<button class="card rv" type="button" data-q="${k}" style="text-align:left;cursor:pointer"><div class="rv-top"><b>${k+1}. ${esc(Q.q)}</b>${Q.t ? `<span class="pill ${short?'p-warn':'p-ok'}">${short?'Could say more':'Full'} · ${n}</span>` : ''}</div><p>${esc(P.answers[k]) || '<span class="hint">No answer</span>'}</p></button>`; }).join('')}</div>
-    <div class="qfoot" style="padding-bottom:60px"><button class="btn ghost" type="button" id="back">← Back</button><button class="btn primary" type="button" id="send" style="padding:14px 22px">Send my answers</button></div>
+    <div class="qfoot" style="padding-bottom:60px"><button class="btn ghost" type="button" id="back">← Back</button><button class="btn primary" type="button" id="send" style="padding:14px 22px">🎁 Send and claim my gift</button></div>
   </main>` + footerHtml();
   document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { P.q = +b.dataset.q; store(); renderQuestion(); });
   $('#back').onclick = () => { P.q = s.questions.length-1; renderQuestion(); };
@@ -693,25 +697,24 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and the first 33 to finish win a reward. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 a UGX 20,000 shopping voucher. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
   const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
-  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You unlocked a reward!</h3>${MAIL}</div>`;
+  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You’ve won a gift!</h3>${MAIL}</div>`;
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
     const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Awaiting approval' ? `<span>Because this is not a Directorate email address, the Malaika Path team will confirm you are part of the team, then send your reward to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Redeemed' ? `<span>Already collected. Thank you.</span>`
       : `<span>Your voucher is being prepared and will reach <b>${esc(P.profile.email)}</b> shortly.</span>`;
-    card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">You won!</span><h3 class="winshout">${esc(rg.name || 'A thank-you from Malaika Path')}</h3>${r.rewardStatus==='Redeemed'?'':MAIL}${status}</div>`;
+    card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Congratulations · you won</span><h3 class="winshout">${esc(rg.name || 'A thank-you from Malaika Path')}</h3>${r.rewardStatus==='Redeemed'?'':MAIL}${status}</div>`;
   }
   $('#root').innerHTML = brandBand() + `<main class="wrap narrow"><section class="done">
-    <span class="eyebrow">Received</span>
-    <h1 style="font-size:clamp(32px,5vw,50px)">Thank you, ${esc(first)}. We heard you.</h1>
-    <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
     ${card}
-    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">The first 33 to finish win a reward. Share it while places last.</p>
+    <h1 style="font-size:clamp(28px,4.4vw,42px)">Thank you, ${esc(first)}. We heard you.</h1>
+    <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
+    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">33 gifts are up for grabs. The best, most detailed answers win first.</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
       <div class="linkbox" id="msgbox">${esc(msg)}</div></div>
     <p class="hint">For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>

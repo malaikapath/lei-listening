@@ -283,7 +283,7 @@ function emailReward_(r, test){
   const body = `<p style="margin:0 0 14px">Dear ${first},</p>
     <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
-    <p style="margin:0 0 6px">Tell a colleague: the first 33 to finish win a reward.</p>`;
+    <p style="margin:0 0 6px">Tell a colleague: 33 gifts are up for grabs, and the best, most detailed answers win first.</p>`;
   const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.</td></tr></table>` : '';
   sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'You won, ' + first + '!', standfirst:'Thank you. Your voice now shapes what comes next.', body: testNote + body}));
 }
