@@ -238,6 +238,7 @@ function apiSubmit(id){
     return r;
   });
   if(res.rewardStatus && res.tier) emailReward_(res);
+  else if(res.rewardStatus === 'Rewards not open yet') emailTestReward_(res);
   return {tier:res.tier, rewardStatus:res.rewardStatus, voucher:res.voucher, depth:res.depth};
 }
 
@@ -269,7 +270,7 @@ function assignVoucher_(r){
   }
 }
 
-function emailReward_(r){
+function emailReward_(r, test){
   if(!r.email || !r.tier || r.tier === 'none') return;
   const rg = rung_(r.tier), reward = rg.name, first = String(r.name||'').split(' ')[0] || 'colleague';
   let line;
@@ -282,8 +283,25 @@ function emailReward_(r){
     <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
     <p style="margin:0 0 6px">Tell a colleague: there is a thank-you for everyone who takes part.</p>`;
-  sendMail_(r.email, 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Your voice now shapes what comes next.', body}));
+  const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.</td></tr></table>` : '';
+  sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Your voice now shapes what comes next.', body: testNote + body}));
 }
+/* Testing mode: rewards are off, but every tester still gets the full reward email, marked TEST,
+   showing the rung they would have reached in completion order. No voucher code is used up. */
+function emailTestReward_(r){
+  if(!r.email || r.mode === 'Interviewer-led') return;
+  const L = ladder_(), full = Number(r.depth) >= Number(setting_('fullThreshold', 75));
+  let key = L[L.length-1].key;
+  if(full){
+    const before = rows_('responses').filter(x => x.status === 'submitted' && x.rewardStatus === 'Rewards not open yet' && x.mode !== 'Interviewer-led'
+      && Number(x.depth) >= Number(setting_('fullThreshold', 75)) && String(x.updated) < String(r.updated)).length;
+    let n = before;
+    for(const x of L){ const c = Number(x.count); if(!c || n < c){ key = x.key; break; } n -= c; }
+  }
+  const sample = Object.assign({}, r, {tier:key, rewardStatus:'Voucher sent', voucher:'TEST-' + Utilities.getUuid().replace(/-/g,'').slice(0,4).toUpperCase()});
+  emailReward_(sample, true);
+}
+
 /* ------------------------------------------------------------------ emails: Malaika Path magazine layout */
 const PAGE_URL = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
 const LEISH_FULL = 'LEISH (Labour, Employment Services, Industrial Relations and OSH)';
@@ -336,7 +354,7 @@ function inviteHtml_(test){
   const ink = '#231A15', muted = '#6B5F57', brand = '#B4441B', gold = '#C98A12', cream = '#F7F1E8';
   const steps = [['1','Listen','Your words'],['2','Map','What gets in the way'],['3','Design','Better ways of working'],['4','Build','Better days, better service']].map(x => `<td width="25%" style="vertical-align:top;padding:10px 6px 10px 0"><div style="font-size:22px;color:${brand};font-family:Georgia,serif">${x[0]}</div><div style="font-size:13px;font-weight:bold;margin-top:2px">${x[1]}</div><div style="font-size:12px;color:${muted};line-height:1.45;margin-top:2px">${x[2]}</div></td>`).join('');
   const li = t => `<tr><td style="vertical-align:top;padding:4px 10px 4px 0;color:${brand};font-family:Arial,sans-serif;font-weight:bold">•</td><td style="padding:4px 0;font-size:15px;line-height:1.55">${t}</td></tr>`;
-  const testbar = test ? '<tr><td style="background:#FBEBD5;padding:12px 28px;font-family:Arial,sans-serif;font-size:13px;color:#7A4300;line-height:1.5"><b>TEST EMAIL.</b> Please go through the tool once only. We have five test places before launch, and rewards stay switched off during testing.</td></tr>' : '';
+  const testbar = test ? '<tr><td style="background:#FBEBD5;padding:12px 28px;font-family:Arial,sans-serif;font-size:13px;color:#7A4300;line-height:1.5"><b>TEST EMAIL.</b> Please go through the tool once, end to end, on your phone if you can. At the end you will receive a sample reward email; the code in it is for testing only.</td></tr>' : '';
   return `<!doctype html><html><body style="margin:0;padding:0;background:${cream}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${cream}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;font-family:Georgia,'Times New Roman',serif;color:${ink}">
@@ -377,12 +395,17 @@ ${testbar}
 ${LEISH_FULL}, in partnership with Malaika Path.<br>Questions? Call the project coordinator on <b style="color:#F6EEE7">0772 550 134</b>.</td></tr>
 </table></td></tr></table></body></html>`;
 }
+/** Up to 10 more testers (phones especially). They are Bcc'd, so they do not see each other's addresses. */
+const EXTRA_TESTERS = [
+  '', '', '', '', '', '', '', '', '', ''
+];
 /** Run from the editor: puts the TEST invitation in the Malaika Path Drafts folder. Nothing is sent. */
 function createTestInviteDraft(){
   const imgs = { crest: UrlFetchApp.fetch(PAGE_URL + 'crest.png').getBlob().setName('crest.png'), logo: UrlFetchApp.fetch(PAGE_URL + 'logo.png').getBlob().setName('malaika-path.png') };
   const to = 'rebekahzadokmugisha@gmail.com,dru.nkyeswa@gmail.com,loyoenock@gmail.com,mlawgeorge@gmail.com';
-  GmailApp.createDraft(to, 'TEST · Your voice first: Listening to Our Team', 'Please view this email in HTML.', {htmlBody: inviteHtml_(true), inlineImages: imgs, name: 'Malaika Path'});
-  Logger.log('Draft created in Malaika Path Drafts for: ' + to);
+  const bcc = EXTRA_TESTERS.filter(Boolean).join(',');
+  GmailApp.createDraft(to, 'TEST · Your voice first: Listening to Our Team', 'Please view this email in HTML.', {htmlBody: inviteHtml_(true), inlineImages: imgs, name: 'Malaika Path', bcc});
+  Logger.log('Draft created in Malaika Path Drafts for: ' + to + (bcc ? ' · Bcc: ' + bcc : ''));
 }
 /** Run from the editor when ready: the invitation for the PS, without the test banner. Nothing is sent. */
 function createPSInviteDraft(){
