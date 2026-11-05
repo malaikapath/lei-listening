@@ -354,7 +354,7 @@ ${testbar}
 <tr><td style="padding:20px 32px 6px;font-size:16px;line-height:1.7">
 <p style="margin:0 0 14px">Dear colleagues,</p>
 <p style="margin:0 0 14px">Following the Honourable Minister’s communication, we invite you to the first step of our improvement programme: a short listening conversation.</p>
-<p style="margin:0 0 14px">This is not an assessment, and it is not about jobs. We want to hear how your work really happens and what gets in the way, so we can fix it together.</p>
+<p style="margin:0 0 14px">This is not an assessment. We want to hear how your work really happens and what gets in the way, so we can fix it together.</p>
 </td></tr>
 <tr><td style="padding:4px 32px 4px"><table role="presentation" width="100%" style="background:${cream};border-radius:10px"><tr><td style="padding:16px 20px">
 <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">How it works</p>
