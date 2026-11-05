@@ -530,7 +530,7 @@ function paintDepth(){
 
 /* ---------- voice: speak, cancel or tick ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const LANGS = [['en-GB','English'],['lg-UG','Luganda'],['sw-KE','Kiswahili']];
+const LANGS = [['en-GB','English'],['sw-KE','Kiswahili']];
 function paintCtrl(){
   const c = $('#ctrl'); if(!c) return;
   const lang = LS.get('lt-lang','en-GB');
@@ -547,7 +547,7 @@ function paintCtrl(){
 }
 function micTip(msg){ const t = $('#micTip'); if(!t) return; t.innerHTML = msg; t.hidden = false; }
 function startRec(){
-  if(!SR){ micTip('<b>Speak using your keyboard.</b> Tap inside the answer box, then tap the microphone on your phone keyboard. It works in English, Luganda and Kiswahili.'); $('#ans').focus(); return; }
+  if(!SR){ micTip('<b>Speak using your keyboard.</b> Tap inside the answer box, then tap the microphone on your phone keyboard. It works in English and Kiswahili.'); $('#ans').focus(); return; }
   const rec = new SR(); rec.lang = LS.get('lt-lang','en-GB'); rec.continuous = true; rec.interimResults = true;
   REC = {rec, final:'', interim:'', start:Date.now(), alive:true};
   rec.onresult = ev => { let interim = ''; for(let k=ev.resultIndex;k<ev.results.length;k++){ const r = ev.results[k]; if(r.isFinal) REC.final += r[0].transcript.trim() + ' '; else interim += r[0].transcript; } REC.interim = interim; paintLive(); };
