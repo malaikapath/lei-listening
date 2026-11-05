@@ -276,7 +276,7 @@ function assignVoucher_(r){
   }
 }
 
-function emailReward_(r, test){
+function emailReward_(r, test, full){
   if(!r.email || !r.tier || r.tier === 'none') return;
   const rg = rung_(r.tier), reward = rg.name, first = String(r.name||'').split(' ')[0] || 'colleague';
   let line;
@@ -290,7 +290,7 @@ function emailReward_(r, test){
     <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
     <p style="margin:0 0 6px">Tell a colleague: 33 gifts are up for grabs, and the best, most detailed answers win first.</p>`;
-  const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.</td></tr></table>` : '';
+  const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.${full === false ? '<br><br><b>Note:</b> your test answers were short. At launch, answers this short would not win a reward; only full, detailed entries do.' : ''}</td></tr></table>` : '';
   sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'You won, ' + first + '!', standfirst:'Thank you. Your voice now shapes what comes next.', body: testNote + body}));
 }
 /* Testing mode: rewards are off, but every tester still gets the full reward email, marked TEST,
@@ -304,14 +304,19 @@ function emailTestReward_(r){
       && Number(x.depth) >= Number(setting_('fullThreshold', 75)) && String(x.updated) < String(r.updated)).length;
     for(const x of L){ const c = Number(x.count); if(!c || n < c){ key = x.key; break; } n -= c; }
   }
-  if(!full){
-    const first = String(r.name||'').split(' ')[0] || 'colleague';
-    sendMail_(r.email, 'TEST · Thank you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'Thank you, ' + first + '.', standfirst:'Your voice now shapes what comes next.',
-      body:`<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> Your answers were too short to win a reward. In the live tool, rushed responses get this thank-you only. Try again with fuller answers to see the reward email.</td></tr></table><p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>`}));
-    return;
-  }
   const sample = Object.assign({}, r, {tier:key, rewardStatus:'Voucher sent', voucher:'TEST-' + Utilities.getUuid().replace(/-/g,'').slice(0,4).toUpperCase()});
-  emailReward_(sample, true);
+  emailReward_(sample, true, full);
+  log_(r.email, 'test reward email', key + (full ? '' : ' (answers short)'));
+}
+
+/** Run once from the editor: sends the TEST reward email to everyone who finished during testing
+    and has not had one yet (e.g. testers who finished before test emails existed). */
+function sendMissedTestRewards(){
+  const done = rows_('audit').filter(x => x.action === 'test reward email').map(x => normEmail_(x.actor));
+  const due = rows_('responses').filter(r => r.status === 'submitted' && r.rewardStatus === 'Rewards not open yet' && r.mode !== 'Interviewer-led' && done.indexOf(normEmail_(r.email)) < 0)
+    .sort((a,b) => String(a.updated).localeCompare(String(b.updated)));
+  due.forEach(emailTestReward_);
+  Logger.log('Test reward emails sent to: ' + (due.map(r => r.email).join(', ') || 'nobody (all done)'));
 }
 
 /* ------------------------------------------------------------------ emails: Malaika Path magazine layout */

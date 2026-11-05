@@ -703,8 +703,7 @@ function renderDone(){
   const rg = rungOf(r.tier) || {};
   let card = '';
   const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
-  if(r.rewardStatus === 'Rewards not open yet' && Number(r.depth) < Number(s.fullThreshold || 75)) card = `<div class="card" style="padding:20px"><b>Test run: these answers were too short for a reward.</b><p class="hint">In the live tool, rushed responses get a thank-you only. Try again with fuller answers to see the gift.</p></div>`;
-  else if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You’ve won a gift!</h3>${MAIL}</div>`;
+  if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You’ve won a gift!</h3>${MAIL}</div>`;
   else if(r.rewardStatus === 'All gifts given' || r.rewardStatus === 'Not full enough for a reward' || !r.tier) card = '';
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
