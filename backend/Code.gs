@@ -230,7 +230,7 @@ function apiSubmit(id){
     else if(setting_('rewardsLive', false) !== true){ r.tier = ''; r.rewardStatus = 'Rewards not open yet'; }
     else {
       r.tier = pickRung_(r.depth >= Number(setting_('fullThreshold', 75)));
-      if(!r.tier){ r.rewardStatus = 'All gifts given'; writeRow_('responses', r, r._row); log_(r.email, 'submitted', 'depth ' + r.depth + ' · no gift left'); return r; }
+      if(!r.tier){ r.rewardStatus = r.depth >= Number(setting_('fullThreshold', 75)) ? 'All gifts given' : 'Not full enough for a reward'; writeRow_('responses', r, r._row); log_(r.email, 'submitted', 'depth ' + r.depth + ' · no gift left'); return r; }
       const needsApproval = r.verified !== 'yes' && setting_('approveUnverified', true) !== false;
       if(needsApproval){ r.rewardStatus = 'Awaiting approval'; }
       else assignVoucher_(r);
@@ -259,8 +259,8 @@ function pickRung_(full){
   const L = ladder_();
   const taken = {}; rows_('responses').filter(x => x.status === 'submitted').forEach(x => taken[x.tier] = (taken[x.tier]||0) + 1);
   const open = x => !Number(x.count) || (taken[x.key]||0) < Number(x.count);
-  const pool = full ? L : L.slice(-1);
-  const r = pool.find(open);
+  if(!full) return '';               // rushed responses do not qualify for any reward
+  const r = L.find(open);
   return r ? r.key : '';
 }
 function assignVoucher_(r){
@@ -298,11 +298,17 @@ function emailReward_(r, test){
 function emailTestReward_(r){
   if(!r.email || r.mode === 'Interviewer-led') return;
   const L = ladder_(), full = Number(r.depth) >= Number(setting_('fullThreshold', 75));
-  let key = L[L.length-1].key;
+  let key = L[0].key;
   if(full){
     let n = rows_('responses').filter(x => x.status === 'submitted' && x.rewardStatus === 'Rewards not open yet' && x.mode !== 'Interviewer-led'
       && Number(x.depth) >= Number(setting_('fullThreshold', 75)) && String(x.updated) < String(r.updated)).length;
     for(const x of L){ const c = Number(x.count); if(!c || n < c){ key = x.key; break; } n -= c; }
+  }
+  if(!full){
+    const first = String(r.name||'').split(' ')[0] || 'colleague';
+    sendMail_(r.email, 'TEST · Thank you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'Thank you, ' + first + '.', standfirst:'Your voice now shapes what comes next.',
+      body:`<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> Your answers were too short to win a reward. In the live tool, rushed responses get this thank-you only. Try again with fuller answers to see the reward email.</td></tr></table><p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>`}));
+    return;
   }
   const sample = Object.assign({}, r, {tier:key, rewardStatus:'Voucher sent', voucher:'TEST-' + Utilities.getUuid().replace(/-/g,'').slice(0,4).toUpperCase()});
   emailReward_(sample, true);

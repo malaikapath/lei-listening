@@ -450,7 +450,7 @@ function renderWelcome(){
       <p class="dir"><b>${esc(s.shortName)}</b> (${esc(s.directorateName.replace(/^Directorate of /,''))})</p>
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
-      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 complete entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed answers do not qualify for the breakfast. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
+      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 full entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed responses will not qualify for a reward. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
       <div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
@@ -593,8 +593,8 @@ async function saveCurrent(showErr){
 function paintDepth(){
   const el = $('#depth'); if(!el) return; const Q = cfg().questions[P.q]; const n = wc(P.answers[P.q]); const r = n / (Q.t||50);
   const lvl = r >= 1 ? 3 : r >= .6 ? 2 : n > 0 ? 1 : 0;
-  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.',(giftsOpen() ? 'Rich, full answer. This counts toward the breakfast!' : 'Rich, full answer. Thank you.')][lvl];
-  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':(giftsOpen()?'full, detailed answers win the breakfast':'the more detail, the better')}</span>`;
+  const label = ['Not started yet','A start. Tell us more, with an example.','Good. A little more detail makes it complete.',(giftsOpen() ? 'Rich, full answer. This counts toward your reward!' : 'Rich, full answer. Thank you.')][lvl];
+  el.innerHTML = `<span class="segs ${lvl===3?'full':''}"><i class="${lvl>=1?'on':''}"></i><i class="${lvl>=2?'on':''}"></i><i class="${lvl>=3?'on':''}"></i></span><b>${label}</b><span></span><span class="hint num">${n} words · ${lvl===3?'this answer counts as full':(giftsOpen()?'only full, detailed answers win a reward':'the more detail, the better')}</span>`;
 }
 
 /* ---------- voice: speak, cancel or tick ---------- */
@@ -699,12 +699,12 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers${giftsOpen() ? ', and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 a UGX 20,000 shopping voucher' : ''}. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers${giftsOpen() ? ', and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 full entries a UGX 20,000 shopping voucher' : ''}. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
   const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
   if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal"><span class="gift" aria-hidden="true">🎁</span><span class="eyebrow" style="color:var(--gold-ink)">Test run · sample reward</span><h3 class="winshout">You’ve won a gift!</h3>${MAIL}</div>`;
-  else if(r.rewardStatus === 'All gifts given') card = '';
+  else if(r.rewardStatus === 'All gifts given' || r.rewardStatus === 'Not full enough for a reward' || !r.tier) card = '';
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
     const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
