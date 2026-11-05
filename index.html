@@ -1057,7 +1057,7 @@ function sampleResponses(){
     r.depth = depthOf(r);
     if(r.status==='submitted'){
       if(r.mode==='Interviewer-led'){ r.tier='none'; r.rewardStatus='Not eligible (interviewer-led)'; }
-      else { const k = out.filter(x=>x.status==='submitted'&&x.tier&&x.tier!=='none').length; r.tier = r.depth < 75 ? 'office' : (k < 5 ? 'cj' : k < 15 ? 'endiro' : 'office'); r.rewardStatus = r.verified==='no' ? 'Awaiting approval' : (r.tier==='endiro' ? 'Unlocked, voucher to follow' : 'Voucher sent'); if(r.rewardStatus==='Voucher sent') r.voucher = (r.tier==='cj'?'CJ-SAMPLE-':'LEISH-S') + String(i+1).padStart(3,'0'); }
+      else { const k = out.filter(x=>x.status==='submitted'&&x.tier&&x.tier!=='none').length; r.tier = r.depth < 75 ? 'office' : (k < 5 ? 'cj' : k < 15 ? 'endiro' : 'office'); r.rewardStatus = r.verified==='no' ? 'Awaiting approval' : (r.tier==='cj' ? 'Voucher sent' : 'Unlocked, voucher to follow'); if(r.rewardStatus==='Voucher sent') r.voucher = 'CJ-SAMPLE-' + String(i+1).padStart(3,'0'); }
     }
     out.push(r);
   });
