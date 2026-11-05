@@ -331,6 +331,66 @@ function sendMail_(to, subject, html){
   catch(e){ log_('system','email failed', to + ' · ' + e.message); }
 }
 
+/* ------------------------------------------------------------------ invitation email (drafts only; a person clicks Send) */
+function inviteHtml_(test){
+  const ink = '#231A15', muted = '#6B5F57', brand = '#B4441B', gold = '#C98A12', cream = '#F7F1E8';
+  const steps = [['1','Listen','Your words'],['2','Map','What gets in the way'],['3','Design','Better ways of working'],['4','Build','Better days, better service']].map(x => `<td width="25%" style="vertical-align:top;padding:10px 6px 10px 0"><div style="font-size:22px;color:${brand};font-family:Georgia,serif">${x[0]}</div><div style="font-size:13px;font-weight:bold;margin-top:2px">${x[1]}</div><div style="font-size:12px;color:${muted};line-height:1.45;margin-top:2px">${x[2]}</div></td>`).join('');
+  const li = t => `<tr><td style="vertical-align:top;padding:4px 10px 4px 0;color:${brand};font-family:Arial,sans-serif;font-weight:bold">•</td><td style="padding:4px 0;font-size:15px;line-height:1.55">${t}</td></tr>`;
+  const testbar = test ? '<tr><td style="background:#FBEBD5;padding:12px 28px;font-family:Arial,sans-serif;font-size:13px;color:#7A4300;line-height:1.5"><b>TEST EMAIL.</b> Please go through the tool once only. We have five test places before launch, and rewards stay switched off during testing.</td></tr>' : '';
+  return `<!doctype html><html><body style="margin:0;padding:0;background:${cream}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${cream}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;font-family:Georgia,'Times New Roman',serif;color:${ink}">
+${testbar}
+<tr><td style="background:#2B1A13;padding:18px 28px"><table role="presentation" width="100%"><tr>
+<td style="vertical-align:middle;width:44px"><img src="cid:crest" width="40" height="43" alt="Coat of arms of Uganda" style="display:block"></td>
+<td style="vertical-align:middle;padding-left:12px;font-family:Arial,sans-serif;color:#F6EEE7;font-size:12px;line-height:1.4"><b style="font-size:14px">${LEISH_FULL}</b><br>Ministry of Gender, Labour and Social Development</td>
+<td align="right" style="vertical-align:middle;font-family:Arial,sans-serif;color:#C9B3A4;font-size:10px;letter-spacing:1.5px;text-transform:uppercase">in partnership with<br><img src="cid:logo" width="54" height="54" alt="Malaika Path" style="display:inline-block;margin-top:6px;background:#fff;border-radius:8px"></td>
+</tr></table></td></tr>
+<tr><td style="height:5px;background:#F2C300;font-size:0;line-height:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="33%" style="height:5px;background:#111111"></td><td width="34%" style="height:5px;background:#F2C300"></td><td width="33%" style="height:5px;background:#D21F26"></td></tr></table></td></tr>
+<tr><td style="padding:34px 32px 8px">
+<p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${brand};font-weight:bold">An invitation · Listening to Our Team</p>
+<h1 style="margin:10px 0 10px;font-size:32px;line-height:1.12;font-weight:normal">Your work, in your own words</h1>
+<p style="margin:0;font-size:17px;line-height:1.5;color:${muted};font-style:italic">Six questions. Fifteen minutes. Speak or type.</p></td></tr>
+<tr><td style="padding:20px 32px 6px;font-size:16px;line-height:1.7">
+<p style="margin:0 0 14px">Dear colleagues,</p>
+<p style="margin:0 0 14px">Following the Honourable Minister’s communication, we invite you to the first step of our improvement programme: a short listening conversation.</p>
+<p style="margin:0 0 14px">This is not an assessment, and it is not about jobs. We want to hear how your work really happens and what gets in the way, so we can fix it together.</p>
+</td></tr>
+<tr><td style="padding:4px 32px 4px"><table role="presentation" width="100%" style="background:${cream};border-radius:10px"><tr><td style="padding:16px 20px">
+<p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">How it works</p>
+<table role="presentation" cellpadding="0" cellspacing="0">${li("On your phone or computer, in English or Kiswahili.")}${li("Confidential. Reports show units, never names.")}${li("A personal code by email lets you stop and come back.")}</table>
+<p style="margin:12px 0 6px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">Simple rules</p>
+<table role="presentation" cellpadding="0" cellspacing="0">${li("One conversation per person, with your own email.")}${li("Use your @mglsd.go.ug email if you have one. Personal emails are confirmed first.")}${li("Answer in full. Detail helps most.")}</table>
+</td></tr></table></td></tr>
+<tr><td style="padding:18px 32px 4px"><table role="presentation" width="100%" style="border:2px dashed ${gold};border-radius:12px;background:#FFFBF2"><tr><td style="padding:16px 20px;font-size:17px;line-height:1.5"><span style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">A little surprise</span><br>There is a reward waiting for the first people to finish. <i>How many? We’re not saying.</i> Don’t wait.</td></tr></table></td></tr>
+<tr><td align="center" style="padding:22px 32px 10px"><a href="${PAGE_URL}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;font-size:16px;padding:14px 28px;border-radius:10px">Start the conversation</a></td></tr>
+<tr><td style="padding:12px 32px 6px"><table role="presentation" width="100%" style="border-top:2px solid ${ink}"><tr><td style="padding-top:16px">
+<p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">The programme</p>
+<h2 style="margin:8px 0 8px;font-size:21px;font-weight:normal">Listening first, then building together</h2>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6">The Minister’s vision, delivered with Malaika Path: better tools, support and recognition for every officer. It starts with your voice.</p>
+</td></tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 6px;font-family:Arial,sans-serif"><tr>${steps}</tr></table></td></tr>
+<tr><td style="padding:12px 32px 24px"><table role="presentation" width="100%" style="background:${cream};border-left:4px solid ${brand};border-radius:6px"><tr><td style="padding:16px 18px;font-size:19px;line-height:1.5;font-style:italic">“Listen first. Act next. Speak last.”<br><span style="font-family:Arial,sans-serif;font-style:normal;font-size:12px;color:${muted};letter-spacing:1px;text-transform:uppercase">The Malaika Path way</span></td></tr></table></td></tr>
+<tr><td style="padding:0 32px 26px;font-size:15px;line-height:1.6">With appreciation,<br><b>Rebekah Zadok Mugisha</b><br><span style="color:${muted}">Lead Consultant, Malaika Path</span></td></tr>
+<tr><td style="background:#2B1A13;padding:20px 32px;font-family:Arial,sans-serif;color:#C9B3A4;font-size:12px;line-height:1.6">
+<b style="color:#F6EEE7;font-size:13px">Malaika Path</b> · <i>Empowering Africa, one story at a time.</i><br>
+${LEISH_FULL}, in partnership with Malaika Path.<br>Questions? Call the project coordinator on <b style="color:#F6EEE7">0772 550 134</b>.</td></tr>
+</table></td></tr></table></body></html>`;
+}
+/** Run from the editor: puts the TEST invitation in the Malaika Path Drafts folder. Nothing is sent. */
+function createTestInviteDraft(){
+  const imgs = { crest: UrlFetchApp.fetch(PAGE_URL + 'crest.png').getBlob().setName('crest.png'), logo: UrlFetchApp.fetch(PAGE_URL + 'logo.png').getBlob().setName('malaika-path.png') };
+  const to = 'rebekahzadokmugisha@gmail.com,dru.nkyeswa@gmail.com,loyoenock@gmail.com,mlawgeorge@gmail.com';
+  GmailApp.createDraft(to, 'TEST · Your voice first: Listening to Our Team', 'Please view this email in HTML.', {htmlBody: inviteHtml_(true), inlineImages: imgs, name: 'Malaika Path'});
+  Logger.log('Draft created in Malaika Path Drafts for: ' + to);
+}
+/** Run from the editor when ready: the invitation for the PS, without the test banner. Nothing is sent. */
+function createPSInviteDraft(){
+  const imgs = { crest: UrlFetchApp.fetch(PAGE_URL + 'crest.png').getBlob().setName('crest.png'), logo: UrlFetchApp.fetch(PAGE_URL + 'logo.png').getBlob().setName('malaika-path.png') };
+  GmailApp.createDraft('', 'Your voice first: Listening to Our Team', 'Please view this email in HTML.', {htmlBody: inviteHtml_(false), inlineImages: imgs, name: 'Malaika Path'});
+  Logger.log('PS invitation draft created in Malaika Path Drafts (add the PS address before sending).');
+}
+
 /* ------------------------------------------------------------------ Malaika Path API */
 function apiAdmin(key){
   isAdmin_(key);
