@@ -397,6 +397,7 @@ function renderWelcome(){
       <div>
         <span class="eyebrow">${esc(s.toolName)}${P.interviewer ? ' · Interviewer-led' : ''}</span>
         <h1 style="margin-top:10px">Your work, <em>in your own words.</em></h1>
+        ${s.shortName ? `<p style="margin-top:12px;font-weight:600;font-size:17px">${esc(s.shortName)} <span style="font-weight:500;color:var(--muted)">(${esc(s.directorateName.replace(/^Directorate of /,''))})</span></p>` : ''}
         <p class="lede">${esc(s.intro)}</p>
         <div class="promises">
           <div class="promise"><i>1</i><span><b>Six questions, about 15 minutes.</b> Speak your answers, the way you would tell a colleague. You can also type.</span></div>
