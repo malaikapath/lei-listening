@@ -2,7 +2,7 @@
 
 A Malaika Path tool for the **LEISH Directorate**: the Directorate of Labour, Employment Services, Industrial Relations and OSH at the Ministry of Gender, Labour and Social Development.
 
-Staff sign up once with their name, email, role and unit, and receive a personal code by email to come back with. They answer six questions by speaking (English or Kiswahili) or typing. At the end they discover a thank-you from the reward ladder: the first 5 full responses get Café Javas breakfast, the next 10 get Endiro Coffee breakfast, and the next 35 get a gift collected from the Minister's office. Short answers go to the last step. Rewards are emailed from malaikapath@gmail.com (no reply). The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
+Staff sign up once with their name, email, role and unit, and receive a personal code by email to come back with. They answer six questions by speaking (English or Kiswahili) or typing. At the end they discover a thank-you from the reward ladder: the first 5 full responses get a Café Javas breakfast voucher (UGX 34,000), the next 10 an Endiro breakfast combo (UGX 15,000), and the next 35 a Freedom voice and data voucher (UGX 8,000). Short answers go to the last step. Rewards are emailed from malaikapath@gmail.com (no reply). The Malaika Path team sees progress, gaps, quotes and recommendations in the control room.
 
 | Who | Link |
 |---|---|
@@ -22,6 +22,10 @@ Staff sign up once with their name, email, role and unit, and receive a personal
 2. Run `setup` and allow the permissions. The log shows the sheet link and the control-room password, which is stored as script property `ADMIN_KEY`.
 3. Go to **Deploy > New deployment > Web app**. Set **Execute as** to Me and **Who has access** to Anyone, then copy the `/exec` link.
 4. Paste that link into `config.js` as `apiUrl`.
+
+## Loading voucher codes
+
+In the control room, go to **Rewards > Load voucher codes**, choose the reward, and paste the codes one per line (a single column copied from Excel works). Each code is issued once, in completion order. Load each reward type separately.
 
 ## Day to day
 

@@ -249,9 +249,9 @@ function apiSubmit(id){
 /* The reward ladder: rewards go out in order of completion. Full answers take the next
    rung that still has places; short answers go to the last rung. count 0 = no limit. */
 const LADDER_DEFAULT = [
-  {key:'cj', name:'Café Javas breakfast combo: a croissant and hot chocolate', count:5, howTo:'Show this code at any Café Javas branch to redeem it.'},
-  {key:'endiro', name:'Endiro Coffee breakfast combo', count:10, howTo:'Show this code at any Endiro Coffee branch to redeem it.'},
-  {key:'office', name:'A thank-you gift from the Minister’s office', count:35, howTo:'Take this code to the Minister’s office to collect your gift. The project coordinator will confirm the time.', auto:true}
+  {key:'cj', name:'Café Javas breakfast voucher', count:5, howTo:'Show this code at any Café Javas branch to redeem it.'},
+  {key:'endiro', name:'Endiro breakfast combo', count:10, howTo:'Show this code at any Endiro Coffee branch to redeem it.'},
+  {key:'office', name:'Freedom voice and data voucher (UGX 8,000)', count:35, howTo:'Load this voucher code on your phone using the instructions in your email.'}
 ];
 function ladder_(){ const l = setting_('rewards', LADDER_DEFAULT); return (Array.isArray(l) && l.length) ? l : LADDER_DEFAULT; }
 function rung_(key){ return ladder_().find(x => x.key === key) || ladder_()[ladder_().length-1]; }
