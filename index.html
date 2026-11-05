@@ -66,7 +66,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .mp-mark img{width:100%;height:100%;object-fit:contain}
 .lock-text{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .lock-text b{font-family:var(--display);font-size:16px;letter-spacing:.02em}
-.lock-text span{font-size:12.5px;color:var(--band-muted);overflow:hidden;text-overflow:ellipsis}
+.lock-text span{font-size:12px;color:var(--band-muted)}
 .partner{display:flex;align-items:center;gap:10px;text-align:right;line-height:1.25;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--band-muted)}
 .partner b{color:var(--band-ink);font-weight:600;display:block}
 .crest{width:48px;height:50px;flex:none;display:grid;place-items:center}
@@ -380,6 +380,7 @@ function levelFromTitle(t){ t = String(t||'').toLowerCase();
   if(/commissioner|director|permanent secretary|minister/.test(t)) return 'Leadership';
   if(/record|\bit\b|ict|driver|secretar|clerk|attendant|account|typist|steno|librar|reception|store|admin assistant|office assistant|askari|security/.test(t)) return 'Support / IT / Records';
   return 'Officer'; }
+function leish(){ const s = cfg(); return s.shortName ? s.shortName + ' (' + s.directorateName.replace(/^Directorate of /,'') + ')' : s.directorateName; }
 function ladder(){ const l = cfg().rewards; return (Array.isArray(l) && l.length) ? l : DEFAULTS.rewards; }
 function rungOf(key){ const L = ladder(); return L.find(x => x.key === key) || null; }
 function rungName(key){ const r = rungOf(key); return r ? r.name : (key === 'none' ? 'No reward (interviewer-led)' : ''); }
@@ -404,11 +405,11 @@ function brandBand(right){
   const s = cfg();
   const crest = s.logoMinistry || CREST, mp = s.logoMP || MP_LOGO;
   return `<div class="band"><div class="wrap">
-    <div class="lockup"><span class="crest"><img src="${esc(crest)}" alt="Coat of arms of Uganda"></span><span class="lock-text"><b>${esc(s.shortName || 'Directorate')}</b><span>${esc(s.ministryName)}</span></span></div>
+    <div class="lockup"><span class="crest"><img src="${esc(crest)}" alt="Coat of arms of Uganda"></span><span class="lock-text"><b>${esc(s.shortName || 'Directorate')}</b><span>(${esc(s.directorateName.replace(/^Directorate of /,''))}) · ${esc(s.ministryName)}</span></span></div>
     <div class="partner"><span>Powered by</span><span class="mp-mark"><img src="${esc(mp)}" alt="Malaika Path"></span></div>
     ${right||''}</div></div><div class="flag"></div>`;
 }
-function footerHtml(){ const s = cfg(); return `<footer><div class="wrap"><span>${esc(s.shortName)} · ${esc(s.ministryName)} · Powered by Malaika Path</span><span>Questions? Call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b></span></div></footer>`; }
+function footerHtml(){ const s = cfg(); return `<footer><div class="wrap"><span>${esc(leish())} · ${esc(s.ministryName)} · in partnership with Malaika Path</span><span>Questions? Call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b></span></div></footer>`; }
 /* =====================================================================
    PARTICIPANT
    ===================================================================== */
@@ -459,7 +460,7 @@ function renderProfile(err){
       <div class="field"><label for="un">Unit where you work</label><select id="un" required><option value="">Choose your unit</option>${s.units.map(u=>`<option ${p.unit===u[0]?'selected':''}>${esc(u[0])}</option>`).join('')}</select></div>
       ${P.interviewer ? `<div class="field"><label for="iv">Interviewer name</label><input id="iv" value="${esc(p.interviewer||'')}" required></div>` : ''}
       <div class="field"><label>Language you will speak in</label><div class="nudges" role="radiogroup" aria-label="Speaking language">${LANGS.map(l=>`<label class="nudge" style="border-style:solid;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="radio" name="lng" value="${l[0]}" ${LS.get('lt-lang','en-GB')===l[0]?'checked':''} style="accent-color:var(--brand)"> ${l[1]}</label>`).join('')}</div></div>
-      <label class="check"><input type="checkbox" id="ok" ${p.ok?'checked':''}><span>I work in ${esc(s.shortName || 'the Directorate')}, and I am answering for myself.</span></label>
+      <label class="check"><input type="checkbox" id="ok" ${p.ok?'checked':''}><span>I work in ${esc(leish())}, and I am answering for myself.</span></label>
       <div class="qfoot"><button class="btn ghost" type="button" id="back">← Back</button><button class="btn primary" id="go" type="submit">Get my code →</button></div>
     </form></main>` + footerHtml();
   $('#back').onclick = renderWelcome;
@@ -646,7 +647,7 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${s.shortName}. It takes about 15 minutes, you can speak your answers, and there is a thank-you waiting at the end. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers, and there is a thank-you waiting at the end. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
   if(r.rewardStatus === 'Rewards not open yet') card = `<div class="voucher reveal">${CUP}<span class="eyebrow" style="color:var(--gold-ink)">A thank-you is on its way</span><h3 style="font-size:22px">We will email you at ${esc(P.profile.email)}</h3><span>Thank you for being one of the first to share.</span></div>`;
@@ -661,7 +662,7 @@ function renderDone(){
   $('#root').innerHTML = brandBand() + `<main class="wrap narrow"><section class="done">
     <span class="eyebrow">Received</span>
     <h1 style="font-size:clamp(32px,5vw,50px)">Thank you, ${esc(first)}. We heard you.</h1>
-    <p class="lede">What you shared goes straight into making ${esc(s.shortName)} a better place to work, and better for the workers and employers we serve.</p>
+    <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
     ${card}
     <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">Everyone who takes part finds a thank-you at the end.</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
@@ -779,7 +780,7 @@ function renderAdmin(){
   $('#root').innerHTML = `<header class="adm-bar"><div class="wrap">
       <button class="burger" id="burger" type="button" aria-label="Open menu">${ICON.burger}</button>
       <span class="mp-mark" style="width:42px;height:42px">${s.logoMP ? `<img src="${esc(s.logoMP)}" alt="Malaika Path">` : MP_MARK}</span>
-      <div class="adm-title"><b>${esc(title)}</b><span>Malaika Path control room · ${esc(s.directorateName)}</span></div>
+      <div class="adm-title"><b>${esc(title)}</b><span>Malaika Path control room · ${esc(leish())}</span></div>
       <button class="btn small" id="refresh" type="button" style="background:transparent;color:var(--band-ink);border-color:rgba(255,255,255,.2)">Refresh</button>
     </div></header><div class="flag"></div>
     <main class="wrap" id="sec"></main>`;

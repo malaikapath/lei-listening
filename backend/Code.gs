@@ -157,19 +157,14 @@ function apiResendCode(email){
   return true; // same answer either way, so nobody can test which emails are signed up
 }
 function emailCode_(r){
-  const s = settings_();
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#231A15;line-height:1.55">
-    <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6B5F57"><b>${s.shortName || 'LEISH'}</b> · Ministry of Gender, Labour and Social Development · powered by Malaika Path</p>
-    <h2 style="margin:6px 0 12px">Your personal code</h2>
-    <p>Hello ${String(r.name||'').split(' ')[0]}, thank you for joining <i>Listening to Our Team</i>. Use this code with your email to come back and continue at any time:</p>
-    <p style="font-size:28px;letter-spacing:6px;font-family:monospace;background:#F7ECD3;padding:12px 18px;border-radius:8px;display:inline-block">${r.code}</p>
-    <p><a href="https://rebekahzadokmugisha-boop.github.io/lei-listening/">Open Listening to Our Team</a></p>
-    <p style="background:#F6F4F0;padding:10px 12px;border-radius:8px;font-size:13px">Please do not reply to this email; this inbox is not monitored. For any question, call the ${s.contactName || 'Malaika Path project coordinator'} on <b>${s.contactPhone || '0772 550 134'}</b>.</p></div>`;
-  try{ MailApp.sendEmail({to:r.email, subject:'Your code · Listening to Our Team', htmlBody:html, name:'Malaika Path (no reply)'}); log_('system','code email', r.email); }
-  catch(e){ log_('system','code email failed', r.email + ' · ' + e.message); }
+  const first = String(r.name||'').split(' ')[0] || 'colleague';
+  const body = `<p style="margin:0 0 14px">Dear ${first},</p>
+    <p style="margin:0 0 14px">Thank you for stepping into <i>Listening to Our Team</i>. Here is your personal code. With your email address, it takes you straight back to where you stopped, on any phone or computer.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 18px"><tr><td style="background:#F7ECD3;border-radius:10px;padding:16px 26px;font-family:'Courier New',monospace;font-size:32px;letter-spacing:8px;color:#5A3D05;font-weight:bold">${r.code}</td></tr></table>
+    <p style="margin:0 0 18px">Speak your answers the way you would tell a colleague. There are no wrong answers, only honest ones, and the more detail you give, the more it helps.</p>
+    <p style="margin:0 0 6px"><a href="${PAGE_URL}" style="display:inline-block;background:#B4441B;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;padding:13px 22px;border-radius:10px">Continue the conversation</a></p>`;
+  sendMail_(r.email, 'Your personal code · Listening to Our Team', emailShell_({kicker:'Listening to Our Team', title:'Your voice, in your own words', standfirst:'Six questions. About fifteen minutes. One honest conversation about the work you do every day.', body}));
 }
-
-/* ------------------------------------------------------------------ public API */
 function apiPublic(){
   const rs = rows_('responses'), units = {};
   rs.filter(r => r.status === 'submitted').forEach(r => units[r.unit] = (units[r.unit]||0) + 1);
@@ -275,29 +270,67 @@ function assignVoucher_(r){
 }
 
 function emailReward_(r){
-  if(!r.email) return;
-  const s = settings_();
-  const dir = s.directorateName || 'Directorate of Labour, Employment Services, Industrial Relations and OSH';
-  const rg = rung_(r.tier), reward = rg.name;
-  const first = String(r.name||'').split(' ')[0] || 'colleague';
+  if(!r.email || !r.tier || r.tier === 'none') return;
+  const rg = rung_(r.tier), reward = rg.name, first = String(r.name||'').split(' ')[0] || 'colleague';
   let line;
-  if(r.tier === 'none') return;
-  if(r.rewardStatus === 'Voucher sent') line = `<p>Your reward: <b>${reward}</b>.</p><p style="font-size:22px;letter-spacing:2px;font-family:monospace;background:#F3EEDD;padding:12px 16px;border-radius:8px;display:inline-block">${r.voucher}</p><p>${rg.howTo || ''}</p>`;
-  else if(r.rewardStatus === 'Awaiting approval') line = `<p>You have unlocked <b>${reward}</b>. Because you used a personal email address, the Malaika Path team will confirm you are part of the Directorate and then send your voucher here.</p>`;
-  else line = `<p>You have unlocked <b>${reward}</b>. Your voucher code is being prepared and will reach this inbox shortly.</p>`;
-  const more = '';
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#1d2a26;line-height:1.55">
-    <p style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#6B5F57"><b>${s.shortName || 'LEISH'}</b> · ${dir} · powered by Malaika Path</p>
-    <h2 style="margin:6px 0 12px">Thank you, ${first}. You have unlocked a reward.</h2>
-    <p>We received your answers to <i>Listening to Our Team</i>. What you shared will help shape a better working environment for everyone in the Directorate, and better service for the workers and employers who come to us.</p>
-    ${line}${more}
-    <p>Please tell a colleague: everyone who takes part finds a thank-you at the end.</p>
-    <p style="background:#F6F4F0;padding:10px 12px;border-radius:8px;font-size:13px">Please do not reply to this email; this inbox is not monitored. For any question, call the ${s.contactName || 'Malaika Path project coordinator'} on <b>${s.contactPhone || '0772 550 134'}</b>.</p>
-    <p style="color:#666;font-size:13px">Your answers are confidential and are used only for this improvement programme.<br>Malaika Path · Kalema Close, Bukasa Road, Kampala</p></div>`;
-  try{
-    MailApp.sendEmail({to:r.email, subject:'You unlocked a reward · Listening to Our Team', htmlBody:html, name:'Malaika Path (no reply)'});
-    log_('system','email', r.email + ' · ' + r.rewardStatus);
-  }catch(e){ log_('system','email failed', r.email + ' · ' + e.message); }
+  if(r.rewardStatus === 'Voucher sent') line = `<p style="margin:0 0 10px">Your thank-you: <b>${reward}</b>.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 12px"><tr><td style="background:#F7ECD3;border:2px dashed #C98A12;border-radius:12px;padding:16px 24px;font-family:'Courier New',monospace;font-size:26px;letter-spacing:5px;color:#5A3D05;font-weight:bold">${r.voucher}</td></tr></table>
+      <p style="margin:0 0 14px;font-size:14px;color:#6B5F57">${rg.howTo || ''}</p>`;
+  else if(r.rewardStatus === 'Awaiting approval') line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Because you used a personal email address, the Malaika Path team will confirm you are part of the Directorate, then send your voucher to this inbox.</p>`;
+  else line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Your voucher is being prepared and will reach this inbox shortly.</p>`;
+  const body = `<p style="margin:0 0 14px">Dear ${first},</p>
+    <p style="margin:0 0 14px">Your answers are in. Thank you for giving your time and your honesty. What you shared now joins the voices of colleagues across the Directorate, and together they will shape what comes next.</p>
+    ${line}
+    <p style="margin:0 0 6px">Please tell a colleague. Everyone who takes part finds a thank-you at the end.</p>`;
+  sendMail_(r.email, 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'We heard you, ' + first + '.', standfirst:'Every answer you gave is a step towards a better place to work, and better service for the workers and employers who come to us.', body}));
+}
+/* ------------------------------------------------------------------ emails: Malaika Path magazine layout */
+const PAGE_URL = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
+const LEISH_FULL = 'LEISH (Labour, Employment Services, Industrial Relations and OSH)';
+function emailShell_(o){
+  const s = settings_(), ink = '#231A15', muted = '#6B5F57', brand = '#B4441B', gold = '#C98A12', cream = '#F7F1E8';
+  const phone = s.contactPhone || '0772 550 134', who = s.contactName || 'Malaika Path project coordinator';
+  return `<!doctype html><html><body style="margin:0;padding:0;background:${cream}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${cream}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;font-family:Georgia,'Times New Roman',serif;color:${ink}">
+  <tr><td style="background:#2B1A13;padding:18px 28px">
+    <table role="presentation" width="100%"><tr>
+      <td style="vertical-align:middle"><img src="${PAGE_URL}crest.png" width="40" height="43" alt="Coat of arms of Uganda" style="display:block"></td>
+      <td style="vertical-align:middle;padding-left:12px;font-family:Arial,sans-serif;color:#F6EEE7;font-size:12px;line-height:1.4"><b style="font-size:14px">${LEISH_FULL}</b><br>Ministry of Gender, Labour and Social Development</td>
+      <td align="right" style="vertical-align:middle;font-family:Arial,sans-serif;color:#C9B3A4;font-size:10px;letter-spacing:1.5px;text-transform:uppercase">in partnership with<br><img src="${PAGE_URL}logo.png" width="54" height="54" alt="Malaika Path" style="display:inline-block;margin-top:6px;background:#fff;border-radius:8px"></td>
+    </tr></table></td></tr>
+  <tr><td style="height:5px;background:linear-gradient(90deg,#111 0 33%,#F2C300 33% 66%,#D21F26 66%);font-size:0">&nbsp;</td></tr>
+  <tr><td style="padding:34px 32px 10px">
+    <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${brand};font-weight:bold">${o.kicker}</p>
+    <h1 style="margin:10px 0 14px;font-size:34px;line-height:1.12;font-weight:normal">${o.title}</h1>
+    <p style="margin:0;font-size:18px;line-height:1.55;color:${muted};font-style:italic">${o.standfirst}</p>
+  </td></tr>
+  <tr><td style="padding:22px 32px 8px;font-size:16px;line-height:1.7">${o.body}</td></tr>
+  <tr><td style="padding:10px 32px 6px">
+    <table role="presentation" width="100%" style="border-top:2px solid ${ink}"><tr><td style="padding-top:18px">
+      <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${gold};font-weight:bold">The programme</p>
+      <h2 style="margin:8px 0 10px;font-size:22px;font-weight:normal">Listening first, then building together</h2>
+      <p style="margin:0 0 12px;font-size:15px;line-height:1.7">${LEISH_FULL} is working in partnership with Malaika Path on a programme set in motion by the Honourable Minister. Its aim is simple: a directorate where every officer has the tools, support and recognition to serve Uganda’s workers and employers well, and where good work is seen.</p>
+      <p style="margin:0 0 12px;font-size:15px;line-height:1.7">Nothing will be designed from outside. The first step is <i>Listening to Our Team</i>: hearing, in staff’s own words, how the work really happens and what gets in the way. What you share becomes the foundation for everything that follows.</p>
+    </td></tr></table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 6px;font-family:Arial,sans-serif"><tr>
+      ${[['1','Listen','Every voice, in its own words'],['2','Map','Gaps in tools, process, skills and culture'],['3','Design','Roles, measures and one connected workspace'],['4','Build','Better days at work, better service']].map(x => `<td width="25%" style="vertical-align:top;padding:10px 6px 10px 0"><div style="font-size:22px;color:${brand};font-family:Georgia,serif">${x[0]}</div><div style="font-size:13px;font-weight:bold;margin-top:2px">${x[1]}</div><div style="font-size:12px;color:${muted};line-height:1.45;margin-top:2px">${x[2]}</div></td>`).join('')}
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:14px 32px 26px">
+    <table role="presentation" width="100%" style="background:${cream};border-left:4px solid ${brand};border-radius:6px"><tr><td style="padding:16px 18px;font-size:19px;line-height:1.5;font-style:italic">“Listen first. Act next. Speak last.”<br><span style="font-family:Arial,sans-serif;font-style:normal;font-size:12px;color:${muted};letter-spacing:1px;text-transform:uppercase">The Malaika Path way</span></td></tr></table>
+  </td></tr>
+  <tr><td style="background:#2B1A13;padding:22px 32px;font-family:Arial,sans-serif;color:#C9B3A4;font-size:12px;line-height:1.6">
+    <b style="color:#F6EEE7;font-size:13px">Malaika Path</b> · Customer and citizen experience, transformation and training<br>
+    <i>Empowering Africa: one story, one letter, one word, one training at a time.</i><br><br>
+    Please do not reply to this email; this inbox is not monitored. For any question, call the ${who} on <b style="color:#F6EEE7">${phone}</b>.<br>
+    Your answers are confidential and are used only to make work better in ${LEISH_FULL}.
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+function sendMail_(to, subject, html){
+  try{ MailApp.sendEmail({to, subject, htmlBody:html, name:'Malaika Path (no reply)'}); log_('system','email', to + ' · ' + subject); }
+  catch(e){ log_('system','email failed', to + ' · ' + e.message); }
 }
 
 /* ------------------------------------------------------------------ Malaika Path API */
