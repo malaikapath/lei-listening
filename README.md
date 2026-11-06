@@ -6,9 +6,9 @@ Staff sign up once with their name, email, role and unit, and receive a personal
 
 | Who | Link |
 |---|---|
-| Staff | https://rebekahzadokmugisha-boop.github.io/lei-listening/ |
-| Interviewer-led session | https://rebekahzadokmugisha-boop.github.io/lei-listening/?view=interview |
-| Malaika Path control room | https://rebekahzadokmugisha-boop.github.io/lei-listening/?view=admin |
+| Staff | https://malaikapath.github.io/lei-listening/ |
+| Interviewer-led session | https://malaikapath.github.io/lei-listening/?view=interview |
+| Malaika Path control room | https://malaikapath.github.io/lei-listening/?view=admin |
 
 ## How it is built
 

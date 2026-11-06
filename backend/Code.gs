@@ -49,7 +49,7 @@ function setup(){
 function doGet(e){
   const p = (e && e.parameter) || {};
   if(p.api){ return json_(route_(p.api, p.args ? JSON.parse(p.args) : [])); }
-  return json_({ok:true, service:'Malaika Path · Listening to Our Team API', page:'https://rebekahzadokmugisha-boop.github.io/lei-listening/'});
+  return json_({ok:true, service:'Malaika Path · Listening to Our Team API', page:'https://malaikapath.github.io/lei-listening/'});
 }
 function doPost(e){
   let body = {};
@@ -170,7 +170,7 @@ function apiPublic(){
   rs.filter(r => r.status === 'submitted').forEach(r => units[r.unit] = (units[r.unit]||0) + 1);
   const fullUnlocked = rs.filter(r => r.status === 'submitted' && r.tier && r.tier !== 'none').length;
   const giftsTotal = ladder_().reduce((a,x) => a + (Number(x.count) || 1e9), 0);
-  const appUrl = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
+  const appUrl = 'https://malaikapath.github.io/lei-listening/';
   return { settings: Object.assign({}, settings_(), {rewards: ladder_()}), units, total: rs.filter(r => r.status === 'submitted').length, fullUnlocked, giftsLeft: Math.max(0, giftsTotal - fullUnlocked), appUrl };
 }
 
@@ -320,7 +320,7 @@ function sendMissedTestRewards(){
 }
 
 /* ------------------------------------------------------------------ emails: Malaika Path magazine layout */
-const PAGE_URL = 'https://rebekahzadokmugisha-boop.github.io/lei-listening/';
+const PAGE_URL = 'https://malaikapath.github.io/lei-listening/';
 const LEISH_FULL = 'LEISH (Labour, Employment Services, Industrial Relations and OSH)';
 function emailShell_(o){
   const s = settings_(), ink = '#231A15', muted = '#6B5F57', brand = '#B4441B', gold = '#C98A12', cream = '#F7F1E8';
