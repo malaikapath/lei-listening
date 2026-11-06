@@ -167,6 +167,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .welcome h1{font-size:clamp(36px,6vw,60px);font-weight:800;letter-spacing:-.015em;margin-top:6px}
 .welcome h1 em{font-style:normal;color:var(--brand)}
 .welcome .lede{font-size:18px;color:var(--muted);margin-top:0}
+.locked{display:grid;gap:8px;justify-items:center;text-align:center;width:min(460px,100%);margin-top:14px;padding:20px 18px;border-radius:16px;background:var(--sunk);border:1px solid var(--line)}
+.locked .lk{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--brand);color:#fff;font-size:20px}
+.locked b{font-size:19px;color:var(--ink)}
+.locked span{color:var(--muted);font-size:15px;max-width:44ch}
+.locked .btn{opacity:.55;cursor:not-allowed;width:min(320px,100%)}
 .cta-col{display:grid;gap:10px;width:min(320px,100%);margin-top:10px}
 .btn.big{padding:15px 22px;font-size:17px}
 .why{max-width:60ch;text-align:left;font-size:15px;color:var(--muted)}
@@ -308,6 +313,7 @@ const DEFAULTS = {
   ],
   fullThreshold: 75,
   rewardsLive: false,
+  surveyOpen: false,
   allowedDomains: 'mglsd.go.ug',
   accessMode: 'open',
   approveUnverified: true,
@@ -387,7 +393,7 @@ function cfg(){ const s = Object.assign({}, DEFAULTS, SETTINGS); s.questions = (
 function toast(m){ const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(()=>t.hidden=true, 2800); }
 function fmt(iso){ if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
 let PARAMS = null;
-function params(){ if(PARAMS) return PARAMS; const p = new URLSearchParams(location.search); const h = location.hash.replace('#',''); return {view: p.get('view') || (h==='admin'||h==='interview' ? h : ''), ref: p.get('ref') || ''}; }
+function params(){ if(PARAMS) return PARAMS; const p = new URLSearchParams(location.search); const h = location.hash.replace('#',''); return {view: p.get('view') || (h==='admin'||h==='interview' ? h : ''), ref: p.get('ref') || '', team: p.get('team') === 'malaika'}; }
 function levelFromTitle(t){ t = String(t||'').toLowerCase();
   if(/assistant commissioner|principal|head of|manager|senior/.test(t)) return 'Management';
   if(/commissioner|director|permanent secretary|minister/.test(t)) return 'Leadership';
@@ -414,6 +420,8 @@ const MP_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMwAAADACAMAAAB/P
 const MP_MARK = '<img src="'+MP_LOGO+'" alt="Malaika Path">';
 const INAPP = /FBAN|FBAV|Instagram|WhatsApp|Line\/|GSA\/|; wv\)|MicroMessenger|Snapchat|TikTok/i.test(navigator.userAgent);
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+/* The survey stays locked until Malaika Path opens it for everyone at once. Testers use ?team=malaika. */
+function surveyLocked(){ if(MODE === 'preview') return false; if(params().team) return false; return cfg().surveyOpen !== true; }
 /* Once every gift is given, the tool stops promising one. */
 function giftsOpen(){ const s = cfg(); if(s.rewardsLive !== true || !P.pub || P.pub.giftsLeft === undefined) return true; return P.pub.giftsLeft > 0; }
 const CUP = '<svg class="cup" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="var(--gold-soft)"/><path d="M14 30h26v8a11 11 0 0 1-11 11h-4a11 11 0 0 1-11-11z" fill="var(--gold)"/><path d="M40 33h3a5 5 0 0 1 0 10h-4" fill="none" stroke="var(--gold)" stroke-width="3"/><path d="M21 16c0 3 3 3 3 6M28 14c0 3 3 3 3 6" stroke="var(--gold-ink)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M38 52c4-9 14-9 18 0" fill="#E3A94A" stroke="var(--gold-ink)" stroke-width="1.6"/></svg>';
@@ -438,7 +446,7 @@ async function bootParticipant(interviewer){
   const saved = LS.get('lt-session', null);
   if(saved && saved.id){ Object.assign(P, saved); }
   try{ P.pub = await api('apiPublic'); SETTINGS = P.pub.settings || {}; }catch(e){ P.pub = {units:{}, total:0}; }
-  if(P.id && P.profile && !P.result) return renderQuestion();
+  if(P.id && P.profile && !P.result && !surveyLocked()) return renderQuestion();
   renderWelcome();
 }
 function renderWelcome(){
@@ -451,14 +459,15 @@ function renderWelcome(){
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
       ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 full entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed responses will not qualify for a reward. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
-      <div class="cta-col">
+      ${surveyLocked() ? `<div class="locked" role="status"><span class="lk" aria-hidden="true">🔒</span><b>Opening soon</b><span>Awaiting the go-ahead while all staff are informed. The survey opens for everyone at the same moment, so every colleague has a fair chance to be among the first 33.</span><button class="btn primary big" type="button" disabled>Start</button></div>` : `<div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
-      </div>
+      </div>`}
       <details class="why"><summary>Why are we asking?</summary><p>${esc(s.intro)}</p><p>Only the Malaika Path project team reads full answers. Reports show units, never names.</p></details>
       <p class="powered">In partnership with <img src="${esc(s.logoMP || MP_LOGO)}" alt=""> <b>Malaika Path</b></p>
     </section>
   </main>` + footerHtml();
+  if(surveyLocked()) return;
   $('#begin').onclick = () => renderProfile();
   $('#signin').onclick = () => renderSignin();
 }
@@ -1043,6 +1052,9 @@ function secSettings(){
       </section>
       <section class="panel set"><h3>Units and targets</h3><div class="field"><label for="sUnits">One unit per line: name | target number of staff</label><textarea id="sUnits" style="min-height:130px">${esc(s.units.map(u=>u[0]+' | '+u[1]).join('\n'))}</textarea></div>
         <div class="field"><label for="sTarget">Total conversations target</label><input id="sTarget" type="number" value="${s.targetTotal}"></div></section>
+      <section class="panel set"><h3>Opening the survey</h3>
+        <label class="check"><input type="checkbox" id="sOpen" ${s.surveyOpen===true?'checked':''}><span><b>Survey is open to all staff.</b> Leave unticked until the commissioners have shared the link. Until then staff see the welcome page and prizes, with Start locked. The team can still test at the link ending <code>?team=malaika</code>.</span></label>
+      </section>
       <section class="panel set"><h3>Rewards and fairness</h3>
         <div class="field"><label for="sLad">Reward ladder, in order. One step per line: reward | how many people (0 = everyone after) | how to redeem | auto (makes its own collection code)</label>
           <textarea id="sLad" style="min-height:120px">${esc(ladder().map(x=>[x.name, x.count||0, x.howTo||'', x.auto?'auto':''].join(' | ')).join('\n'))}</textarea></div>
@@ -1063,7 +1075,7 @@ function secSettings(){
       units: $('#sUnits').value.split('\n').map(l=>l.split('|')).filter(x=>x[0].trim()).map(x=>[x[0].trim(), Number(x[1])||0]),
       targetTotal:Number($('#sTarget').value)||0,
       rewards: $('#sLad').value.split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(x=>x[0]).map((x,i)=>({key:(ladder()[i]&&ladder()[i].key)||('r'+i), name:x[0], count:Number(x[1])||0, howTo:x[2]||'', auto:/auto/i.test(x[3]||'')})),
-      fullThreshold:Number($('#sFT').value)||75, allowedDomains:$('#sDom').value.trim(), accessMode:$('#sAcc').value, approveUnverified:$('#sApp').checked,
+      fullThreshold:Number($('#sFT').value)||75, allowedDomains:$('#sDom').value.trim(), accessMode:$('#sAcc').value, approveUnverified:$('#sApp').checked, surveyOpen:$('#sOpen').checked,
       wordTargets: s.questions.map((Q,k)=>Number($('#t'+k).value)||0) };
     Object.assign(obj, logos);
     $('#save').disabled = true; $('#save').textContent = 'Saving…';
