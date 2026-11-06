@@ -371,6 +371,7 @@ const Preview = {
   async apiAdminSaveSettings(key, obj){ const d = this.db(); Object.assign(d.settings, obj); this.put(d); return true; },
   async apiAdminApprove(key, id){ const d = this.db(), r = d.responses.find(x=>x.id===id); r.verified='approved'; this.give(d, r); this.put(d); return r.rewardStatus; },
   async apiAdminResend(){ return true; },
+  async apiAdminGoLive(key){ const d = this.db(); const n = d.responses.length; d.tests = (d.tests||[]).concat(d.responses); d.responses = []; d.settings.surveyOpen = true; d.settings.liveSince = new Date().toISOString(); SETTINGS.surveyOpen = true; this.put(d); return {moved:n}; },
   async apiAdminDelete(key, id){ const d = this.db(); d.responses = d.responses.filter(x=>x.id!==id); this.put(d); return true; },
   async apiAdminRelease(key){ const d = this.db(); d.settings.rewardsLive = true; SETTINGS.rewardsLive = true; let n = 0;
     d.responses.filter(r=>r.status==='submitted'&&r.rewardStatus==='Rewards not open yet').sort((a,b)=>String(a.updated).localeCompare(String(b.updated))).forEach(r => { r.tier = pickRung(d.responses, Number(r.depth) >= cfg().fullThreshold); if(r.verified!=='yes' && cfg().approveUnverified) r.rewardStatus='Awaiting approval'; else this.give(d, r); n++; });
@@ -868,6 +869,24 @@ function filterBar(extra){
 function wireFilters(){ const u = $('#fUnit'), l = $('#fLevel'); if(u) u.onchange = () => { A.unit = u.value; renderAdmin(); }; if(l) l.onchange = () => { A.level = l.value; renderAdmin(); }; }
 function sampleNote(){ return A.data.responses.some(r=>r.sample) ? '<div class="note" style="margin-top:4px">These are sample conversations so you can see how the dashboard reads. They disappear when the live tool is connected.</div>' : ''; }
 
+function goLiveCard(){
+  const s = cfg();
+  if(s.surveyOpen === true) return `<div class="panel" style="margin-top:12px;padding:14px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="color:var(--good,#2E7D32)">● Live</b><span class="hint">Open to all staff${s.liveSince ? ' since ' + esc(fmt(s.liveSince)) : ''}.</span></div>`;
+  return `<div class="panel" style="margin-top:12px;padding:18px;display:grid;gap:10px;border:2px solid var(--brand)">
+    <div><span class="eyebrow" style="color:var(--brand)">Not live yet · staff see “Opening soon”</span><h3 style="font-size:20px;margin-top:4px">Ready to launch?</h3>
+    <p class="hint" style="margin-top:4px">Press this once the Commissioners have the link. It moves every test response so far to a separate <b>tests</b> tab in the sheet (kept, not deleted), so reports and prizes start clean, then opens the survey to everyone at the same moment.</p></div>
+    <button class="btn primary" id="goLive" type="button" style="justify-self:start">🚀 Go live now</button></div>`;
+}
+function wireGoLive(){
+  const b = $('#goLive'); if(!b) return;
+  b.onclick = async () => {
+    if(!confirm('Go live now?\n\nAll test responses move to the tests tab, and the survey opens to all LEISH staff immediately.')) return;
+    b.disabled = true; b.textContent = 'Going live…';
+    try{ const r = await api('apiAdminGoLive', A.key); SETTINGS.surveyOpen = true; SETTINGS.liveSince = new Date().toISOString();
+      toast('Live! ' + (r && r.moved || 0) + ' test responses moved aside. Staff can start now.'); await loadAdmin(); }
+    catch(e){ toast('Not done: ' + e.message); b.disabled = false; b.textContent = '🚀 Go live now'; }
+  };
+}
 function secOverview(){
   const s = cfg(), all = filtered(), subs = analyse(all), prog = all.filter(r=>r.status!=='submitted');
   const L = ladder(), given = L.map(x => ({x, n: subs.filter(r=>r.tier===x.key).length})), unlocked = given.reduce((a,g)=>a+g.n,0), cap = L.reduce((a,x)=>a+(Number(x.count)||0),0);
@@ -880,7 +899,7 @@ function secOverview(){
   const maxD = Math.max(1, ...days.map(x=>x.n));
   const gapRank = GAPS.map(g => ({g, n: subs.filter(r=>r._gaps[g.k]).length})).sort((a,b)=>b.n-a.n);
   const voice = quotesFor(subs, null, [3,5], 3);
-  $('#sec').innerHTML = `<div class="sec-head"><div><span class="eyebrow">${esc(s.toolName)}</span><h2>Who has shared, and how it is moving</h2></div>${filterBar()}</div>${sampleNote()}
+  $('#sec').innerHTML = `<div class="sec-head"><div><span class="eyebrow">${esc(s.toolName)}</span><h2>Who has shared, and how it is moving</h2></div>${filterBar()}</div>${goLiveCard()}${sampleNote()}
     <div class="kpis" style="margin-top:12px">
       <div class="kpi"><span class="eyebrow">Conversations done</span><span class="v">${subs.length}<small> / ${s.targetTotal}</small></span><div class="bar"><i style="width:${Math.min(100,subs.length/s.targetTotal*100)}%"></i></div></div>
       <div class="kpi"><span class="eyebrow">In progress</span><span class="v">${prog.length}</span><span class="hint">started, not yet sent</span></div>
@@ -906,7 +925,7 @@ function secOverview(){
         ${voice.length ? voice.map(o => `<div class="quote"><p>“${esc(o.s)}”</p><span>${esc(o.r.level)} · ${esc(o.r.unit)} · Q${o.q}</span></div>`).join('') : '<p class="hint">Quotes appear as conversations arrive.</p>'}
       </div></div>
     </div><div style="height:50px"></div>`;
-  wireFilters(); document.querySelectorAll('[data-go]').forEach(a => a.onclick = () => { A.sec = a.dataset.go; renderAdmin(); });
+  wireFilters(); document.querySelectorAll('[data-go]').forEach(a => a.onclick = () => { A.sec = a.dataset.go; renderAdmin(); }); wireGoLive();
 }
 
 function secPeople(){
