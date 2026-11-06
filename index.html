@@ -610,6 +610,8 @@ function paintDepth(){
 /* ---------- voice: speak, cancel or tick ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const LANGS = [['en-GB','English'],['sw-KE','Kiswahili']];
+/* English is heard with the East African (Kenya) model where the phone has it: it follows Ugandan accents far better than British English. */
+const SPEECH_LANG = l => l === 'en-GB' ? (LS.get('lt-en-model','en-KE')) : l;
 function paintCtrl(){
   const c = $('#ctrl'); if(!c) return;
   const lang = LS.get('lt-lang','en-GB');
@@ -644,22 +646,24 @@ function startRec(){
   const KEYBOARD = 'Tap inside the answer box, then tap the <b>microphone on your phone keyboard</b>. It works in English and Kiswahili.';
   if(INAPP){ micTip(`<b>Open this page in ${OPEN_IN} to speak.</b> Apps like WhatsApp and Gmail block the microphone. Tap ⋮ or the share icon, choose “Open in ${OPEN_IN}”, and sign in with your code. Or: ${KEYBOARD}`); $('#ans').focus(); return; }
   if(!SR){ micTip('<b>Speak using your keyboard.</b> ' + KEYBOARD); $('#ans').focus(); return; }
-  const rec = new SR(); rec.lang = LS.get('lt-lang','en-GB'); rec.continuous = !IOS; rec.interimResults = true;
+  const rec = new SR(); rec.lang = SPEECH_LANG(LS.get('lt-lang','en-GB')); rec.continuous = !IOS; rec.interimResults = true;
   REC = {rec, done:'', final:'', interim:'', start:Date.now(), alive:true, heard:false};
   rec.onresult = ev => { REC.heard = true; const parts = mergeResults(ev.results);
     const fin = parts.filter(x=>x.f).map(x=>x.t).join(' '), interim = parts.filter(x=>!x.f).map(x=>x.t).join(' ');
     REC.final = (REC.done ? REC.done + ' ' : '') + fin; REC.interim = interim; REC.session = fin; paintLive(); };
   rec.onerror = ev => {
     if(ev.error === 'no-speech' || ev.error === 'aborted') return;
+    if(ev.error === 'language-not-supported' && rec.lang === 'en-KE'){ LS.set('lt-en-model','en-GB'); stopRec(false, true); return startRec(); }
     stopRec(false, true);
     const why = ev.error === 'language-not-supported' ? '<b>This phone cannot turn that language into text yet.</b> Choose the other language, or: '
       : ev.error === 'network' ? '<b>The voice service needs a steady internet connection.</b> Anything you said is kept. Try again, or: '
       : (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') ? `<b>The microphone is blocked for this page.</b> Allow it in your browser settings, or open the page in ${OPEN_IN}. Or: `
       : '<b>The microphone did not start on this phone.</b> ';
     micTip(why + KEYBOARD); };
-  rec.onend = () => { if(REC && REC.alive){ REC.done = REC.final.trim(); REC.session = ''; REC.interim = ''; try{ rec.start(); }catch(e){} } };
+  rec.onend = () => { if(REC && REC.alive){ REC.done = (REC.final + ' ' + REC.interim).trim(); REC.session = ''; REC.interim = ''; try{ rec.start(); }catch(e){} } };
   setTimeout(() => { if(REC && REC.rec === rec && !REC.heard) micTip('<b>Can’t see your words yet?</b> Speak a little louder and closer. If nothing appears, tap ✕ and ' + KEYBOARD.charAt(0).toLowerCase() + KEYBOARD.slice(1)); }, 7000);
   try{ rec.start(); }catch(e){ REC = null; return micTip('The microphone could not start. Use the microphone on your keyboard instead.'); }
+  try{ if(navigator.wakeLock) navigator.wakeLock.request('screen').then(w => { if(REC && REC.rec === rec) REC.wake = w; else w.release(); }).catch(()=>{}); }catch(e){}
   const tip = $('#micTip'); if(tip) tip.hidden = true;
   $('#composer').classList.add('rec'); $('#ans').hidden = true; $('#live').hidden = false; paintLive(); paintCtrl();
   REC.timer = setInterval(() => { const s = Math.floor((Date.now()-REC.start)/1000); const t = $('#timer'); if(t) t.textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); if(s >= 300) acceptRec(); }, 500);
@@ -667,12 +671,18 @@ function startRec(){
 function paintLive(){ const l = $('#live'); if(!l || !REC) return; const base = (P.answers[P.q]||'').trim();
   l.innerHTML = (base ? esc(base) + ' ' : '') + `<span>${esc(REC.final)}</span><span class="interim">${esc(REC.interim)}</span>` + (!REC.final && !REC.interim ? '<span class="interim">Start speaking. Your words appear here.</span>' : ''); }
 function stopRec(discard, keep){
-  if(!REC) return; REC.alive = false; clearInterval(REC.timer); try{ REC.rec.abort ? REC.rec.abort() : REC.rec.stop(); }catch(e){}
+  if(!REC) return; REC.alive = false; clearInterval(REC.timer); try{ if(REC.wake) REC.wake.release(); }catch(e){} try{ REC.rec.abort ? REC.rec.abort() : REC.rec.stop(); }catch(e){}
   const said = (REC.final + ' ' + REC.interim).trim(); REC = null;
   const c = $('#composer'); if(c){ c.classList.remove('rec'); $('#ans').hidden = false; $('#live').hidden = true; paintCtrl(); }
   if(keep && said){ const base = (P.answers[P.q]||'').trim(); P.answers[P.q] = (base ? base + ' ' : '') + said; const ta = $('#ans'); if(ta){ ta.value = P.answers[P.q]; autoGrow(ta); paintDepth(); store(); } }
   return discard ? '' : said;
 }
+/* If the screen locks or the person switches apps mid-recording, phones cut the microphone.
+   Save everything heard so far into the answer so nothing is lost, and say so when they come back. */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && REC){ const said = stopRec(false, true); if(said) window.__micSaved = true; }
+  else if(document.visibilityState === 'visible' && window.__micSaved){ window.__micSaved = false; toast('Your screen went off, so we saved what you said. Tap the microphone to carry on.'); }
+});
 function acceptRec(){
   const said = stopRec(false); if(!said) return;
   const base = (P.answers[P.q]||'').trim(); P.answers[P.q] = (base ? base + ' ' : '') + said.charAt(0).toUpperCase() + said.slice(1);
