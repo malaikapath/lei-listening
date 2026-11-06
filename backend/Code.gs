@@ -58,9 +58,9 @@ function doPost(e){
 }
 function json_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function route_(fn, args){
-  const allowed = {apiAdminRelease:1, apiAdminDelete:1, apiSignup:1, apiLogin:1, apiChangeCode:1, apiResendCode:1, apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
+  const allowed = {apiAdminGoLive:1, apiAdminRelease:1, apiAdminDelete:1, apiSignup:1, apiLogin:1, apiChangeCode:1, apiResendCode:1, apiPublic:1, apiStart:1, apiSave:1, apiSubmit:1, apiAdmin:1, apiAdminSaveSettings:1, apiAdminApprove:1, apiAdminAddVouchers:1, apiAdminResend:1, apiAdminSetStatus:1};
   if(!allowed[fn]) return {error:'Unknown action'};
-  const API = {apiAdminRelease, apiAdminDelete, apiSignup, apiLogin, apiChangeCode, apiResendCode, apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
+  const API = {apiAdminGoLive, apiAdminRelease, apiAdminDelete, apiSignup, apiLogin, apiChangeCode, apiResendCode, apiPublic, apiStart, apiSave, apiSubmit, apiAdmin, apiAdminSaveSettings, apiAdminApprove, apiAdminAddVouchers, apiAdminResend, apiAdminSetStatus};
   try{ return {ok:true, data: API[fn].apply(null, args)}; }
   catch(err){ return {error: err.message || String(err)}; }
 }
@@ -506,6 +506,23 @@ function apiAdminRelease(key){
     return k;
   });
   return {released: 0, tests: n};
+}
+/** Go live: every response so far is a test run. Move them all to a 'tests' tab (kept, not
+    deleted) so reports and the reward count start clean, then open the survey to all staff. */
+function apiAdminGoLive(key){
+  isAdmin_(key);
+  return lock_(() => {
+    const rs = rows_('responses'), H = TABS.responses;
+    let t = sh_('tests');
+    if(!t){ t = ss_().insertSheet('tests'); t.getRange(1,1,1,H.length).setValues([H]).setFontWeight('bold'); }
+    if(rs.length){
+      t.getRange(t.getLastRow()+1, 1, rs.length, H.length).setValues(rs.map(r => H.map(k => r[k] === undefined ? '' : r[k])));
+      const rsh = sh_('responses'); rsh.insertRowAfter(rsh.getMaxRows()); rsh.deleteRows(2, rs.length);
+    }
+    saveSettings_({surveyOpen: true, liveSince: now_()});
+    log_('admin','went live', rs.length + ' test responses moved to the tests tab; survey opened to all staff');
+    return {moved: rs.length};
+  });
 }
 /** Removes one response for good, e.g. a test. */
 function apiAdminDelete(key, id){
