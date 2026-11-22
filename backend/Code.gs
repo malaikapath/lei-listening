@@ -231,7 +231,9 @@ function apiSubmit(id){
     else {
       r.tier = pickRung_(r.depth >= Number(setting_('fullThreshold', 75)));
       if(!r.tier){ r.rewardStatus = r.depth >= Number(setting_('fullThreshold', 75)) ? 'All gifts given' : 'Not full enough for a reward'; writeRow_('responses', r, r._row); log_(r.email, 'submitted', 'depth ' + r.depth + ' · no gift left'); return r; }
-      const needsApproval = r.verified !== 'yes' && setting_('approveUnverified', true) !== false;
+      const sameName = rows_('responses').some(x => x.id !== r.id && normName_(x.name) && normName_(x.name) === normName_(r.name) && normEmail_(x.email) !== normEmail_(r.email));
+      if(sameName) r.dupFlag = 'Same name as another response, different email';
+      const needsApproval = sameName || (r.verified !== 'yes' && setting_('approveUnverified', true) !== false);
       if(needsApproval){ r.rewardStatus = 'Awaiting approval'; }
       else assignVoucher_(r);
     }
@@ -282,14 +284,14 @@ function emailReward_(r, test, full){
   let line;
   if(r.rewardStatus === 'Voucher sent') line = `<p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#C98A12;font-weight:bold">You won</p>
       <p style="margin:0 0 12px;font-size:30px;line-height:1.15;color:#B4441B;font-weight:bold">${reward}!</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 12px"><tr><td style="background:#F7ECD3;border:2px dashed #C98A12;border-radius:12px;padding:16px 24px;font-family:'Courier New',monospace;font-size:26px;letter-spacing:5px;color:#5A3D05;font-weight:bold">${r.voucher}</td></tr></table>
+      ${rg.auto ? '' : `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 12px"><tr><td style="background:#F7ECD3;border:2px dashed #C98A12;border-radius:12px;padding:16px 24px;font-family:'Courier New',monospace;font-size:26px;letter-spacing:5px;color:#5A3D05;font-weight:bold">${r.voucher}</td></tr></table>`}
       <p style="margin:0 0 14px;font-size:14px;color:#6B5F57">${rg.howTo || ''}</p>`;
   else if(r.rewardStatus === 'Awaiting approval') line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. We will confirm your work details, then send your voucher here.</p>`;
   else line = `<p style="margin:0 0 14px">You have unlocked <b>${reward}</b>. Your voucher will reach this inbox shortly.</p>`;
   const body = `<p style="margin:0 0 14px">Dear ${first},</p>
     <p style="margin:0 0 14px">Your answers are in. Thank you for your time and honesty.</p>
     ${line}
-    <p style="margin:0 0 6px">Tell a colleague: 33 gifts are up for grabs, and the best, most detailed answers win first.</p>`;
+    <p style="margin:0 0 6px">Tell a colleague: over 60 gifts are up for grabs. Be among those who get one: the fullest, most detailed answers win first.</p>`;
   const testNote = test ? `<table role="presentation" width="100%" style="margin:0 0 16px;background:#FBEBD5;border-radius:8px"><tr><td style="padding:12px 16px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#7A4300"><b>TEST EMAIL.</b> This is exactly what staff will receive. The code below is a sample and cannot be redeemed. Real rewards start when Malaika Path switches them on.${full === false ? '<br><br><b>Note:</b> your test answers were short. At launch, answers this short would not win a reward; only full, detailed entries do.' : ''}</td></tr></table>` : '';
   sendMail_(r.email, (test ? 'TEST · ' : '') + 'A thank-you for you · Listening to Our Team', emailShell_({kicker:'With our thanks', title:'You won, ' + first + '!', standfirst:'Thank you. Your voice now shapes what comes next.', body: testNote + body}));
 }
