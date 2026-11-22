@@ -459,7 +459,7 @@ function renderWelcome(){
       <p class="dir"><b>${esc(s.shortName)}</b> (${esc(s.directorateName.replace(/^Directorate of /,''))})</p>
       <h1>Your work, <em>in your own words.</em></h1>
       <p class="lede">Six questions. About 15 minutes. Speak or type.<br>Not a test. Confidential. Here to make your work easier.</p>
-      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas breakfast!</b><span class="shout2">The next 30 full entries win a <b>UGX 20,000</b> shopping voucher.</span><span>Rushed responses will not qualify for a reward. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
+      ${P.interviewer ? '<p class="note">Interviewer-led session</p>' : !giftsOpen() ? '' : `<div class="teaser">${CUP}<div><span class="eyebrow" style="color:var(--gold-ink)">Finish and win</span><b class="shout">The first 3 full, detailed entries win a Café Javas voucher!</b><span class="shout2">The next 60 full entries each win a small token of appreciation.</span><span>Rushed responses will not qualify for a reward. Take your time, give real examples, and watch the bar under each answer turn full.</span></div></div>`}
       ${surveyLocked() ? `<div class="locked" role="status"><span class="lk" aria-hidden="true">🔒</span><b>Opening soon</b><span>We are waiting for every LEISH staff member to receive this link, so the survey can go live for everyone at once.</span><span>Because participation is rewarded, and the first full, detailed entries win, everyone starts together. This is for fairness.</span><button class="btn primary big" type="button" disabled>Start</button></div>` : `<div class="cta-col">
         <button class="btn primary big" id="begin" type="button">Start</button>
         <button class="btn" id="signin" type="button">I have my code</button>
@@ -719,7 +719,7 @@ function renderDone(){
   const s = cfg(), r = P.result || {}, first = (P.profile.name||'').split(' ')[0];
   const base = (P.pub && P.pub.appUrl) || (MODE === 'remote' ? location.href.split('?')[0].split('#')[0] : '');
   const link = base ? base + '?ref=' + encodeURIComponent(P.id||'') : '';
-  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers${giftsOpen() ? ', and the first 3 full, detailed entries win a Café Javas breakfast, and the next 30 full entries a UGX 20,000 shopping voucher' : ''}. ${link}`;
+  const msg = `I just shared my experience in "${s.toolName}" for ${leish()}. It takes about 15 minutes, you can speak your answers${giftsOpen() ? ', and the first 3 full, detailed entries win a Café Javas voucher, and the next 60 a small token of appreciation' : ''}. ${link}`;
   const rg = rungOf(r.tier) || {};
   let card = '';
   const MAIL = `<p class="mailshout">📩 Check your email now!</p><span>Your reward details are on their way to <b>${esc(P.profile.email)}</b>. Look in your inbox, and in Promotions or Spam just in case.</span>`;
@@ -727,7 +727,7 @@ function renderDone(){
   else if(r.rewardStatus === 'All gifts given' || r.rewardStatus === 'Not full enough for a reward' || !r.tier) card = '';
   else if(r.tier === 'none') card = `<div class="card" style="padding:20px"><b>Interview recorded.</b><p class="hint">Interviewer-led conversations are part of the research but do not unlock a reward.</p></div>`;
   else {
-    const status = r.rewardStatus === 'Voucher sent' ? `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`
+    const status = r.rewardStatus === 'Voucher sent' ? (rg.auto ? `<span>${esc(rg.howTo||'')} We have also sent these details to <b>${esc(P.profile.email)}</b>.</span>` : `<code>${esc(r.voucher||'')}</code><span>${esc(rg.howTo||'')} We have also sent it to <b>${esc(P.profile.email)}</b>.</span>`)
       : r.rewardStatus === 'Awaiting approval' ? `<span>Because this is not a Directorate email address, the Malaika Path team will confirm you are part of the team, then send your reward to <b>${esc(P.profile.email)}</b>.</span>`
       : r.rewardStatus === 'Redeemed' ? `<span>Already collected. Thank you.</span>`
       : `<span>Your voucher is being prepared and will reach <b>${esc(P.profile.email)}</b> shortly.</span>`;
@@ -737,7 +737,7 @@ function renderDone(){
     ${card}
     <h1 style="font-size:clamp(28px,4.4vw,42px)">Thank you, ${esc(first)}. We heard you.</h1>
     <p class="lede">What you shared goes straight into making ${esc(leish())} a better place to work, and better for the workers and employers we serve.</p>
-    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">${giftsOpen() ? "33 gifts are up for grabs. The best, most detailed answers win first." : "Every voice shapes what comes next."}</p>
+    <div class="card" style="padding:20px;display:grid;gap:12px"><b>Tell a colleague.</b><p class="hint">${giftsOpen() ? "Over 60 gifts are up for grabs. Be among those who get one: the fullest, most detailed answers win first." : "Every voice shapes what comes next."}</p>
       <div class="share"><a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" id="copy" type="button">Copy the message</button></div>
       <div class="linkbox" id="msgbox">${esc(msg)}</div></div>
     <p class="hint">For any question, call the ${esc(s.contactName)} on <b class="num">${esc(s.contactPhone)}</b>.</p>
